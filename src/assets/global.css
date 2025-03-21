@@ -1,0 +1,30 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto !important; /* 禁用平滑滚动，提高性能 */
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2c3e50;
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  text-rendering: optimizeSpeed;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  /* 防止重绘 */
+  transform: translateZ(0);
+  contain: layout paint style;
+} 
