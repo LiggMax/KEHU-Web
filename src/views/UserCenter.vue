@@ -1,9 +1,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElUpload } from 'element-plus';
+import { ElMessage, ElUpload, ElMessageBox } from 'element-plus';
 import { isLoggedIn, getUserInfo } from '../utils/auth.js';
 import { useRouter } from 'vue-router';
 import { getUserVideosService, uploadVideoService, deleteVideoService } from '../api/video.js';
+import { UploadFilled, VideoCamera } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const currentUser = ref(null);
@@ -41,47 +42,12 @@ const loadUserVideos = async () => {
     if (res.code === 200 && res.data) {
       videoList.value = res.data;
     } else {
-      // 如果API未实现或出错，使用模拟数据
-      videoList.value = [
-        {
-          id: 1,
-          title: '示例视频 1',
-          description: '这是一个示例视频',
-          coverUrl: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/示例视频',
-          viewCount: 156,
-          createTime: '2024-03-15'
-        },
-        {
-          id: 2,
-          title: '示例视频 2',
-          description: '这是另一个示例视频',
-          coverUrl: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/示例视频',
-          viewCount: 89,
-          createTime: '2024-03-18'
-        }
-      ];
+      videoList.value = [];
     }
   } catch (error) {
     console.error('获取视频列表失败', error);
-    // 使用模拟数据
-    videoList.value = [
-      {
-        id: 1,
-        title: '示例视频 1',
-        description: '这是一个示例视频',
-        coverUrl: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/示例视频',
-        viewCount: 156,
-        createTime: '2024-03-15'
-      },
-      {
-        id: 2,
-        title: '示例视频 2',
-        description: '这是另一个示例视频',
-        coverUrl: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/示例视频',
-        viewCount: 89,
-        createTime: '2024-03-18'
-      }
-    ];
+    videoList.value = [];
+    ElMessage.error('获取视频列表失败，请刷新页面重试');
   }
 };
 
@@ -102,7 +68,23 @@ const closeUploadDialog = () => {
 
 // 处理视频文件选择
 const handleVideoChange = (file) => {
-  videoForm.videoFile = file.raw;
+  if (file.raw) {
+    // 检查文件类型
+    const acceptedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/mkv'];
+    if (!acceptedTypes.includes(file.raw.type) && !file.raw.name.match(/\.(mp4|avi|mov|wmv|flv|mkv)$/i)) {
+      ElMessage.warning('请上传支持的视频格式文件');
+      return false;
+    }
+    
+    // 检查文件大小，限制为100MB
+    const maxSize = 1000 * 1024 * 1024; // 100MB
+    if (file.raw.size > maxSize) {
+      ElMessage.warning('文件大小不能超过1000MB');
+      return false;
+    }
+    
+    videoForm.videoFile = file.raw;
+  }
   return false; // 阻止默认上传行为
 };
 
@@ -121,73 +103,70 @@ const submitVideo = async () => {
   uploading.value = true;
   
   try {
-    // 实际调用上传API
+    // 创建上传进度监听器
+    const onUploadProgress = (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        uploadProgress.value = percentCompleted;
+      }
+    };
+    
+    // 调用上传API
     const res = await uploadVideoService({
       title: videoForm.title,
       description: videoForm.description,
       videoFile: videoForm.videoFile
-    });
+    }, onUploadProgress);
     
-    // 模拟上传进度
-    const simulateProgress = () => {
-      const timer = setInterval(() => {
-        uploadProgress.value += 10;
-        if (uploadProgress.value >= 100) {
-          clearInterval(timer);
-          uploading.value = false;
-          
-          // 上传成功后处理
-          if (res.code === 200) {
-            ElMessage.success('视频上传成功');
-            
-            // 添加到视频列表（实际项目中应该是从后端获取）
-            if (res.data) {
-              videoList.value.unshift(res.data);
-            } else {
-              // 如果后端未返回视频数据，使用模拟数据
-              videoList.value.unshift({
-                id: Date.now(),
-                title: videoForm.title,
-                description: videoForm.description,
-                coverUrl: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/新视频',
-                viewCount: 0,
-                createTime: new Date().toISOString().split('T')[0]
-              });
-            }
-            
-            closeUploadDialog();
-          } else {
-            ElMessage.error(res.message || '上传失败');
-          }
-        }
-      }, 300);
-    };
-    
-    simulateProgress();
+    // 处理上传结果
+    if (res.code === 200) {
+      ElMessage.success('视频上传成功');
+      
+      // 添加到视频列表
+      if (res.data) {
+        videoList.value.unshift(res.data);
+      }
+      
+      closeUploadDialog();
+    } else {
+      ElMessage.error(res.message || '上传失败');
+    }
   } catch (error) {
     console.error('上传视频失败', error);
-    uploading.value = false;
     ElMessage.error('上传视频失败，请稍后再试');
+  } finally {
+    uploading.value = false;
   }
 };
 
 // 删除视频
 const deleteVideo = async (id) => {
   try {
-    // 实际调用删除API
-    const res = await deleteVideoService(id);
+    const confirmResult = await ElMessageBox.confirm(
+      '确定要删除这个视频吗？此操作不可撤销。',
+      '删除提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    );
     
-    if (res.code === 200) {
-      videoList.value = videoList.value.filter(video => video.id !== id);
-      ElMessage.success('删除成功');
-    } else {
-      ElMessage.error(res.message || '删除失败');
+    if (confirmResult === 'confirm') {
+      const res = await deleteVideoService(id);
+      
+      if (res.code === 200) {
+        videoList.value = videoList.value.filter(video => video.id !== id);
+        ElMessage.success('删除成功');
+      } else {
+        ElMessage.error(res.message || '删除失败');
+      }
     }
   } catch (error) {
-    console.error('删除视频失败', error);
-    // 模拟删除成功
-    videoList.value = videoList.value.filter(video => video.id !== id);
-    ElMessage.success('删除成功');
+    if (error !== 'cancel') {
+      console.error('删除视频失败', error);
+      ElMessage.error('删除视频失败，请稍后再试');
+    }
   }
 };
 </script>
@@ -263,10 +242,13 @@ const deleteVideo = async (id) => {
         title="上传视频"
         v-model="dialogVisible"
         width="500px"
+        :close-on-click-modal="!uploading"
+        :close-on-press-escape="!uploading"
+        :show-close="!uploading"
       >
         <el-form label-position="top">
-          <el-form-item label="视频标题">
-            <el-input v-model="videoForm.title" placeholder="请输入视频标题"></el-input>
+          <el-form-item label="视频标题" required>
+            <el-input v-model="videoForm.title" placeholder="请输入视频标题" :disabled="uploading"></el-input>
           </el-form-item>
           
           <el-form-item label="视频描述">
@@ -274,28 +256,30 @@ const deleteVideo = async (id) => {
               v-model="videoForm.description" 
               type="textarea" 
               rows="3" 
-              placeholder="请输入视频描述"
+              placeholder="请输入视频描述（可选）"
+              :disabled="uploading"
             ></el-input>
           </el-form-item>
           
-          <el-form-item label="视频文件">
+          <el-form-item label="视频文件" required>
             <el-upload
               class="video-uploader"
               action="#"
               :auto-upload="false"
               :on-change="handleVideoChange"
               :show-file-list="false"
-              accept="video/*"
+              accept="video/mp4,video/avi,video/mov,video/wmv,video/flv,video/mkv"
+              :disabled="uploading"
             >
               <div class="upload-area" v-if="!videoForm.videoFile">
-                <i class="el-icon-upload"></i>
+                <el-icon class="upload-icon"><upload-filled /></el-icon>
                 <div class="el-upload__text">点击或拖拽视频文件到此区域上传</div>
-                <div class="el-upload__tip">支持MP4, MOV, AVI等格式视频文件</div>
+                <div class="el-upload__tip">支持MP4, MOV, AVI等格式视频文件，大小不超过100MB</div>
               </div>
               <div class="selected-file" v-else>
-                <i class="el-icon-video-camera"></i>
-                <span>{{ videoForm.videoFile.name }}</span>
-                <el-button size="small" type="primary">重新选择</el-button>
+                <el-icon class="file-icon"><video-camera /></el-icon>
+                <span class="file-name">{{ videoForm.videoFile.name }}</span>
+                <el-button size="small" type="primary" :disabled="uploading">重新选择</el-button>
               </div>
             </el-upload>
           </el-form-item>
@@ -304,13 +288,17 @@ const deleteVideo = async (id) => {
             v-if="uploading" 
             :percentage="uploadProgress" 
             :format="p => p + '%'"
-            status="success"
+            :status="uploadProgress < 100 ? '' : 'success'"
+            :striped="true"
+            :striped-flow="uploadProgress < 100"
           ></el-progress>
         </el-form>
         <template #footer>
           <span class="dialog-footer">
-            <el-button @click="closeUploadDialog">取消</el-button>
-            <el-button type="primary" @click="submitVideo" :loading="uploading">上传</el-button>
+            <el-button @click="closeUploadDialog" :disabled="uploading">取消</el-button>
+            <el-button type="primary" @click="submitVideo" :loading="uploading" :disabled="uploading">
+              {{ uploading ? '上传中...' : '上传' }}
+            </el-button>
           </span>
         </template>
       </el-dialog>
@@ -585,32 +573,72 @@ const deleteVideo = async (id) => {
   margin-bottom: 1rem;
 }
 
+.video-uploader {
+  width: 100%;
+}
+
 .upload-area {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 2rem;
-  text-align: center;
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .upload-area:hover {
   border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.upload-area:hover .upload-icon {
+  color: #409eff;
+}
+
+.el-upload__text {
+  font-size: 16px;
+  color: #606266;
+  margin-bottom: 6px;
+}
+
+.el-upload__tip {
+  font-size: 12px;
+  color: #909399;
 }
 
 .selected-file {
   display: flex;
   align-items: center;
-  gap: 1rem;
   padding: 1rem;
-  border: 1px solid #eee;
-  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background-color: #f8f9fa;
 }
 
-.selected-file i {
-  font-size: 1.5rem;
-  color: #42b883;
+.file-icon {
+  font-size: 24px;
+  color: #409eff;
+  margin-right: 10px;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 14px;
+  color: #606266;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 10px;
 }
 
 .video-count {
