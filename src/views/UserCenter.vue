@@ -273,7 +273,7 @@ const deleteVideo = async (id) => {
             >
               <div class="upload-area" v-if="!videoForm.videoFile">
                 <el-icon class="upload-icon"><upload-filled /></el-icon>
-                <div class="el-upload__text">点击或拖拽视频文件到此区域上传</div>
+                <div class="el-upload__text">点击视频文件到此区域上传</div>
                 <div class="el-upload__tip">支持MP4, MOV, AVI等格式视频文件，大小不超过100MB</div>
               </div>
               <div class="selected-file" v-else>
