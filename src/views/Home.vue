@@ -66,21 +66,6 @@ const goToUserCenter = () => {
 
 <template>
   <div class="home">
-    <section class="hero">
-      <h1>欢迎来到视频分享平台</h1>
-      <p class="subtitle">探索、分享、发现精彩视频内容</p>
-      
-      <div v-if="loggedIn" class="user-welcome">
-        <h2>欢迎回来，{{ currentUser.username }}</h2>
-        <p>立即开始分享你的精彩视频。</p>
-        <el-button type="primary" @click="goToUserCenter">上传我的视频</el-button>
-      </div>
-      
-      <div v-else class="guest-welcome">
-        <h2>请登录以获取更多功能</h2>
-        <p>登录后可以上传分享您的视频内容。</p>
-      </div>
-    </section>
 
     <!-- 视频展示区域 -->
     <section class="videos">
