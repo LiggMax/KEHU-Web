@@ -11,16 +11,17 @@ import NavBar from './components/NavBar.vue'
   </div>
 </template>
 
-<style scoped>
+<style>
 .app {
   min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content {
-  padding-top: 5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-top: 60px;
+  flex: 1;
+  width: 100%;
 }
 </style>

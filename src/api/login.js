@@ -1,20 +1,19 @@
 import request from '../utils/request.js'
 
-export const loginService = (data) => {
-
+export const loginService = (username, password) => {
     const params = new URLSearchParams()
-    for (let key in data){
-        params.append(key,data[key])
-    }
-    return request.post('/login',params)
+    params.append('username', username)
+    params.append('password', password)
+    
+    return request.post('/login', params)
 }
 
-export const registerService = (data) => {
-
+export const registerService = (username, password) => {
     const params = new URLSearchParams()
-    for (let key in data){
-        params.append(key,data[key])
-    }
-    return request.post('/register',params)
+    params.append('username', username)
+    params.append('password', password)
+    
+    return request.post('/register', params)
 }
+
 

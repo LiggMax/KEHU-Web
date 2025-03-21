@@ -1,7 +1,9 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import {loginService, registerService} from "@/api/login.js";
+import { loginService, registerService } from "@/api/login.js";
+import { getCurrentUserService } from "@/api/user.js"
+import { setUserInfo } from '@/utils/auth.js';
 
 const props = defineProps({
   visible: {
@@ -14,7 +16,8 @@ const isLogin = ref(true);
 const username = ref('');
 const password = ref('');
 const confirmPassword = ref('');
-const emit = defineEmits(['close', 'update:visible']);
+const loading = ref(false);
+const emit = defineEmits(['close', 'update:visible', 'login-success']);
 
 const dialogVisible = ref(props.visible);
 
@@ -23,31 +26,70 @@ watch(() => props.visible, (newValue) => {
 });
 
 const handleLogin = async () => {
-  // 这里添加登录逻辑
-  await loginService(username.value,password.value)
-  console.log('Login attempt:', { username: username.value, password: password.value });
-  ElMessage.success('登录成功')
+  if (!username.value || !password.value) {
+    ElMessage.warning('用户名和密码不能为空');
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const res = await loginService(username.value, password.value);
+    if (res.code === 200) {
+      // 登录成功后获取用户信息
+      const userRes = await getCurrentUserService();
+      if (userRes.code === 200 && userRes.data) {
+        setUserInfo(userRes.data);
+        ElMessage.success('登录成功');
+        resetForm();
+        handleClose();
+        // 通知父组件登录成功
+        emit('login-success');
+      }
+    }
+  } catch (error) {
+    console.error('登录失败', error);
+    ElMessage.error('登录失败，请检查用户名和密码');
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleRegister = async () => {
-  // 这里添加注册逻辑
+  if (!username.value || !password.value) {
+    ElMessage.warning('用户名和密码不能为空');
+    return;
+  }
+  
   if (password.value !== confirmPassword.value) {
     ElMessage.error('两次输入的密码不一致');
     return;
   }
-  console.log('Register attempt:', {
-    username: username.value,
-    password: password.value
-  });
-  await registerService(username.value, password.value)
-  ElMessage.success('注册成功');
+  
+  loading.value = true;
+  try {
+    const res = await registerService(username.value, password.value);
+    if (res.code === 200) {
+      ElMessage.success('注册成功，请登录');
+      isLogin.value = true;
+      resetForm();
+    }
+  } catch (error) {
+    console.error('注册失败', error);
+    ElMessage.error('注册失败，请稍后再试');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const resetForm = () => {
+  username.value = '';
+  password.value = '';
+  confirmPassword.value = '';
 };
 
 const toggleForm = () => {
   isLogin.value = !isLogin.value;
-  username.value = '';
-  password.value = '';
-  confirmPassword.value = '';
+  resetForm();
 };
 
 const handleClose = () => {
@@ -91,7 +133,11 @@ const handleClose = () => {
         />
       </el-form-item>
       <div class="button-group">
-        <el-button type="primary" @click="isLogin ? handleLogin() : handleRegister()">
+        <el-button 
+          type="primary" 
+          @click="isLogin ? handleLogin() : handleRegister()"
+          :loading="loading"
+        >
           {{ isLogin ? '登录' : '注册' }}
         </el-button>
         <el-button @click="handleClose">取消</el-button>

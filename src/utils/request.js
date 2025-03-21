@@ -3,25 +3,32 @@
 //导入axios  npm install axios
 import axios from 'axios';
 import {ElMessage} from "element-plus";
+import router from '../router';
+
 //定义一个变量,记录公共的前缀  ,  baseURL
 const baseURL = '/api';
-const instance = axios.create({baseURL})
+const instance = axios.create({
+    baseURL,
+    withCredentials: true // 允许跨域请求携带cookie
+})
+
 //添加请求拦截器
-// instance.interceptors.request.use(
-//     config => {
-//         //请求前回调
-//         //添加token
-//         const tokenStore = useTokenStore();
-//         if (tokenStore.token) {
-//             config.headers.Authorization = tokenStore.token;
-//         }
-//         return config;
-//     },
-//     (err) => {
-//         //请求失败回调
-//         return Promise.reject(err);//异步的状态转化成失败的状态
-//     }
-// )
+instance.interceptors.request.use(
+    config => {
+        //请求前回调
+        
+        // 对于表单数据，设置正确的Content-Type
+        if (config.data instanceof URLSearchParams) {
+            config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        }
+        
+        return config;
+    },
+    (err) => {
+        //请求失败回调
+        return Promise.reject(err);//异步的状态转化成失败的状态
+    }
+)
 
 //添加响应拦截器
 instance.interceptors.response.use(
@@ -37,11 +44,12 @@ instance.interceptors.response.use(
         return Promise.reject(result.data);
     },
     err => {
-        if (err.response.status === 429) {
+        if (err.response && err.response.status === 429) {
             ElMessage.error('请求过于频繁，请稍后再试')
-        } else if (err.response.status === 401) {
+        } else if (err.response && err.response.status === 401) {
             ElMessage.error('请先登录')
-            //清除token
+            // 重定向到登录页
+            router.push('/')
         } else {
             ElMessage.error('服务异常')
         }

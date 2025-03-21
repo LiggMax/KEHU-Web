@@ -1,4 +1,19 @@
 <script setup>
+import { ref, onMounted } from 'vue'
+import { isLoggedIn, getUserInfo } from '../utils/auth.js'
+
+// 登录状态
+const loggedIn = ref(false)
+// 当前用户信息
+const currentUser = ref(null)
+
+// 页面加载时检查登录状态
+onMounted(() => {
+  if (isLoggedIn()) {
+    loggedIn.value = true
+    currentUser.value = getUserInfo()
+  }
+})
 </script>
 
 <template>
@@ -6,6 +21,16 @@
     <section class="hero">
       <h1>欢迎来到我们的网站</h1>
       <p class="subtitle">为您提供最优质的服务和解决方案</p>
+      
+      <div v-if="loggedIn" class="user-welcome">
+        <h2>欢迎回来，{{ currentUser.username }}</h2>
+        <p>您已经成功登录，可以访问所有功能。</p>
+      </div>
+      
+      <div v-else class="guest-welcome">
+        <h2>请点击右上角的用户图标进行登录</h2>
+        <p>登录后可以享受更多功能和服务。</p>
+      </div>
     </section>
 
     <section class="features">
@@ -64,6 +89,21 @@
 .subtitle {
   font-size: 1.2rem;
   color: #666;
+  margin-bottom: 2rem;
+}
+
+.user-welcome, .guest-welcome {
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.user-welcome h2, .guest-welcome h2 {
+  color: #42b883;
+  margin-bottom: 1rem;
 }
 
 .features {
