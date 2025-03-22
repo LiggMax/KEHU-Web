@@ -102,7 +102,7 @@ onUnmounted(() => {
           controls 
           autoplay
           :src="video.filePath"
-          :poster="video.coverUrl"
+          :poster="video.videoImg || video.coverUrl"
           @error="handleVideoError"
         ></video>
         

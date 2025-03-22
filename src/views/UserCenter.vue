@@ -1,24 +1,46 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed, onUnmounted } from 'vue';
 import { ElMessage, ElUpload, ElMessageBox } from 'element-plus';
 import { isLoggedIn, getUserInfo } from '../utils/auth.js';
 import { useRouter } from 'vue-router';
-import { getUserVideosService, uploadVideoService, deleteVideoService } from '../api/video.js';
+import { deleteVideoService, updateCoverService } from '../api/video.js';
 import { UploadFilled, VideoCamera } from '@element-plus/icons-vue';
+import { getUserVideosService,uploadVideoService } from '@/api/user.js'
 
 const router = useRouter();
 const currentUser = ref(null);
 const videoList = ref([]);
 const dialogVisible = ref(false);
+const coverDialogVisible = ref(false);
+const selectedVideoId = ref(null);
+const coverFile = ref(null);
+const coverUploading = ref(false);
 const videoForm = reactive({
   title: '',
   description: '',
-  videoFile: null
+  videoFile: null,
+  coverFile: null
 });
 
 // 上传进度
 const uploadProgress = ref(0);
 const uploading = ref(false);
+
+// 计算属性：封面预览URL
+const coverPreviewUrl = computed(() => {
+  if (videoForm.coverFile && window.URL) {
+    return window.URL.createObjectURL(videoForm.coverFile);
+  }
+  return '';
+});
+
+// 计算属性：新封面预览URL
+const newCoverPreviewUrl = computed(() => {
+  if (coverFile.value && window.URL) {
+    return window.URL.createObjectURL(coverFile.value);
+  }
+  return '';
+});
 
 onMounted(() => {
   // 检查是否已登录
@@ -60,10 +82,7 @@ const openUploadDialog = () => {
 const closeUploadDialog = () => {
   dialogVisible.value = false;
   // 重置表单
-  videoForm.title = '';
-  videoForm.description = '';
-  videoForm.videoFile = null;
-  uploadProgress.value = 0;
+  clearUploadForm();
 };
 
 // 处理视频文件选择
@@ -76,8 +95,8 @@ const handleVideoChange = (file) => {
       return false;
     }
     
-    // 检查文件大小，限制为100MB
-    const maxSize = 1000 * 1024 * 1024; // 100MB
+    // 检查文件大小，限制为1000MB
+    const maxSize = 1000 * 1024 * 1024; // 1000MB
     if (file.raw.size > maxSize) {
       ElMessage.warning('文件大小不能超过1000MB');
       return false;
@@ -86,6 +105,63 @@ const handleVideoChange = (file) => {
     videoForm.videoFile = file.raw;
   }
   return false; // 阻止默认上传行为
+};
+
+// 处理封面文件选择(视频上传时)
+const handleCoverChange = (file) => {
+  if (file.raw) {
+    // 检查文件类型
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedTypes.includes(file.raw.type) && !file.raw.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      ElMessage.warning('请上传支持的图片格式文件');
+      return false;
+    }
+    
+    // 检查文件大小，限制为5MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.raw.size > maxSize) {
+      ElMessage.warning('封面图片大小不能超过5MB');
+      return false;
+    }
+    
+    videoForm.coverFile = file.raw;
+  }
+  return false; // 阻止默认上传行为
+};
+
+// 处理封面文件选择(单独更新封面)
+const handleCoverFileChange = (file) => {
+  if (file.raw) {
+    // 检查文件类型
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedTypes.includes(file.raw.type) && !file.raw.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      ElMessage.warning('请上传支持的图片格式文件');
+      return false;
+    }
+    
+    // 检查文件大小，限制为5MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.raw.size > maxSize) {
+      ElMessage.warning('封面图片大小不能超过5MB');
+      return false;
+    }
+    
+    coverFile.value = file.raw;
+  }
+  return false; // 阻止默认上传行为
+};
+
+// 移除封面图片
+const removeCover = () => {
+  videoForm.coverFile = null;
+};
+
+// 移除新封面
+const removeNewCover = () => {
+  if (coverFile.value && newCoverPreviewUrl.value) {
+    window.URL.revokeObjectURL(newCoverPreviewUrl.value);
+  }
+  coverFile.value = null;
 };
 
 // 提交视频上传
@@ -115,7 +191,8 @@ const submitVideo = async () => {
     const res = await uploadVideoService({
       title: videoForm.title,
       description: videoForm.description,
-      videoFile: videoForm.videoFile
+      videoFile: videoForm.videoFile,
+      coverFile: videoForm.coverFile
     }, onUploadProgress);
     
     // 处理上传结果
@@ -137,6 +214,15 @@ const submitVideo = async () => {
   } finally {
     uploading.value = false;
   }
+};
+
+// 清除上传表单
+const clearUploadForm = () => {
+  videoForm.title = '';
+  videoForm.description = '';
+  videoForm.videoFile = null;
+  videoForm.coverFile = null;
+  uploadProgress.value = 0;
 };
 
 // 删除视频
@@ -169,6 +255,69 @@ const deleteVideo = async (id) => {
     }
   }
 };
+
+// 打开更新封面对话框
+const openCoverDialog = (videoId) => {
+  selectedVideoId.value = videoId;
+  coverFile.value = null;
+  coverDialogVisible.value = true;
+};
+
+// 关闭更新封面对话框
+const closeCoverDialog = () => {
+  coverDialogVisible.value = false;
+  if (coverFile.value && newCoverPreviewUrl.value) {
+    window.URL.revokeObjectURL(newCoverPreviewUrl.value);
+  }
+  coverFile.value = null;
+  selectedVideoId.value = null;
+};
+
+// 提交更新封面
+const submitCoverUpdate = async () => {
+  if (!selectedVideoId.value) {
+    ElMessage.warning('视频ID无效');
+    return;
+  }
+  
+  if (!coverFile.value) {
+    ElMessage.warning('请选择封面图片');
+    return;
+  }
+  
+  coverUploading.value = true;
+  
+  try {
+    const res = await updateCoverService(selectedVideoId.value, coverFile.value);
+    
+    if (res.code === 200) {
+      ElMessage.success('封面更新成功');
+      
+      // 更新视频列表中的对应视频
+      await loadUserVideos();
+      
+      closeCoverDialog();
+    } else {
+      ElMessage.error(res.message || '更新失败');
+    }
+  } catch (error) {
+    console.error('更新封面失败', error);
+    ElMessage.error('更新封面失败，请稍后再试');
+  } finally {
+    coverUploading.value = false;
+  }
+};
+
+// 组件销毁时清理资源
+onUnmounted(() => {
+  // 清理blob URL
+  if (coverFile.value && newCoverPreviewUrl.value) {
+    window.URL.revokeObjectURL(newCoverPreviewUrl.value);
+  }
+  if (videoForm.coverFile && coverPreviewUrl.value) {
+    window.URL.revokeObjectURL(coverPreviewUrl.value);
+  }
+});
 </script>
 
 <template>
@@ -202,7 +351,7 @@ const deleteVideo = async (id) => {
         <div class="video-list" v-if="videoList.length > 0">
           <div class="video-card" v-for="video in videoList" :key="video.id">
             <div class="video-cover">
-              <img :src="video.coverUrl" alt="视频封面">
+              <img :src="video.videoImg || video.coverUrl" alt="视频封面">
             </div>
             <div class="video-info">
               <h4>{{ video.title }}</h4>
@@ -212,6 +361,7 @@ const deleteVideo = async (id) => {
                 <span class="date">发布: {{ video.createTime }}</span>
               </div>
               <div class="video-actions">
+                <el-button size="small" type="primary" @click="openCoverDialog(video.id)">更新封面</el-button>
                 <el-button size="small" type="warning">编辑</el-button>
                 <el-button size="small" type="danger" @click="deleteVideo(video.id)">删除</el-button>
               </div>
@@ -245,59 +395,136 @@ const deleteVideo = async (id) => {
         :close-on-click-modal="!uploading"
         :close-on-press-escape="!uploading"
         :show-close="!uploading"
+        top="5vh"
+        fullscreen-class="upload-dialog-fullscreen"
       >
-        <el-form label-position="top">
-          <el-form-item label="视频标题" required>
-            <el-input v-model="videoForm.title" placeholder="请输入视频标题" :disabled="uploading"></el-input>
-          </el-form-item>
-          
-          <el-form-item label="视频描述">
-            <el-input 
-              v-model="videoForm.description" 
-              type="textarea" 
-              rows="3" 
-              placeholder="请输入视频描述（可选）"
-              :disabled="uploading"
-            ></el-input>
-          </el-form-item>
-          
-          <el-form-item label="视频文件" required>
-            <el-upload
-              class="video-uploader"
-              action="#"
-              :auto-upload="false"
-              :on-change="handleVideoChange"
-              :show-file-list="false"
-              accept="video/mp4,video/avi,video/mov,video/wmv,video/flv,video/mkv"
-              :disabled="uploading"
-            >
-              <div class="upload-area" v-if="!videoForm.videoFile">
-                <el-icon class="upload-icon"><upload-filled /></el-icon>
-                <div class="el-upload__text">点击视频文件到此区域上传</div>
-                <div class="el-upload__tip">支持MP4, MOV, AVI等格式视频文件，大小不超过100MB</div>
-              </div>
-              <div class="selected-file" v-else>
-                <el-icon class="file-icon"><video-camera /></el-icon>
-                <span class="file-name">{{ videoForm.videoFile.name }}</span>
-                <el-button size="small" type="primary" :disabled="uploading">重新选择</el-button>
-              </div>
-            </el-upload>
-          </el-form-item>
-          
-          <el-progress 
-            v-if="uploading" 
-            :percentage="uploadProgress" 
-            :format="p => p + '%'"
-            :status="uploadProgress < 100 ? '' : 'success'"
-            :striped="true"
-            :striped-flow="uploadProgress < 100"
-          ></el-progress>
-        </el-form>
+        <el-scrollbar height="calc(80vh - 120px)">
+          <el-form label-position="top">
+            <el-form-item label="视频标题" required>
+              <el-input v-model="videoForm.title" placeholder="请输入视频标题" :disabled="uploading"></el-input>
+            </el-form-item>
+            
+            <el-form-item label="视频描述">
+              <el-input 
+                v-model="videoForm.description" 
+                type="textarea" 
+                :rows="3" 
+                placeholder="请输入视频描述（可选）"
+                :disabled="uploading"
+              ></el-input>
+            </el-form-item>
+            
+            <el-form-item label="视频文件" required>
+              <el-upload
+                class="video-uploader"
+                action="#"
+                :auto-upload="false"
+                :on-change="handleVideoChange"
+                :show-file-list="false"
+                accept="video/mp4,video/avi,video/mov,video/wmv,video/flv,video/mkv"
+                :disabled="uploading"
+              >
+                <div class="upload-area" v-if="!videoForm.videoFile">
+                  <el-icon class="upload-icon"><upload-filled /></el-icon>
+                  <div class="el-upload__text">点击视频文件到此区域上传</div>
+                  <div class="el-upload__tip">支持MP4, MOV, AVI等格式视频文件，大小不超过1000MB</div>
+                </div>
+                <div class="selected-file" v-else>
+                  <el-icon class="file-icon"><video-camera /></el-icon>
+                  <span class="file-name">{{ videoForm.videoFile.name }}</span>
+                  <el-button size="small" type="primary" :disabled="uploading">重新选择</el-button>
+                </div>
+              </el-upload>
+            </el-form-item>
+            
+            <el-form-item label="封面图片">
+              <el-upload
+                class="cover-uploader"
+                action="#"
+                :auto-upload="false"
+                :on-change="handleCoverChange"
+                :show-file-list="false"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                :disabled="uploading"
+              >
+                <div class="upload-area is-cover" v-if="!videoForm.coverFile">
+                  <el-icon class="upload-icon"><upload-filled /></el-icon>
+                  <div class="el-upload__text">点击封面图片到此区域上传</div>
+                  <div class="el-upload__tip">支持JPG, PNG, GIF, WEBP格式图片，大小不超过5MB</div>
+                </div>
+                <div v-else class="selected-file is-cover">
+                  <img class="cover-preview" :src="coverPreviewUrl" alt="封面预览">
+                  <div class="cover-actions">
+                    <span class="file-name">{{ videoForm.coverFile.name }}</span>
+                    <el-button size="small" type="danger" @click.stop="removeCover" :disabled="uploading">移除</el-button>
+                  </div>
+                </div>
+              </el-upload>
+            </el-form-item>
+            
+            <el-progress 
+              v-if="uploading" 
+              :percentage="uploadProgress" 
+              :format="p => p + '%'"
+              :status="uploadProgress < 100 ? '' : 'success'"
+              :striped="true"
+              :striped-flow="uploadProgress < 100"
+            ></el-progress>
+          </el-form>
+        </el-scrollbar>
         <template #footer>
           <span class="dialog-footer">
             <el-button @click="closeUploadDialog" :disabled="uploading">取消</el-button>
             <el-button type="primary" @click="submitVideo" :loading="uploading" :disabled="uploading">
               {{ uploading ? '上传中...' : '上传' }}
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
+      
+      <!-- 封面更新对话框 -->
+      <el-dialog
+        title="更新视频封面"
+        v-model="coverDialogVisible"
+        width="500px"
+        :close-on-click-modal="!coverUploading"
+        :close-on-press-escape="!coverUploading"
+        :show-close="!coverUploading"
+        top="10vh"
+      >
+        <el-scrollbar height="calc(60vh - 120px)">
+          <el-form>
+            <el-form-item label="封面图片" required>
+              <el-upload
+                class="cover-uploader"
+                action="#"
+                :auto-upload="false"
+                :on-change="handleCoverFileChange"
+                :show-file-list="false"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                :disabled="coverUploading"
+              >
+                <div class="upload-area is-cover" v-if="!coverFile">
+                  <el-icon class="upload-icon"><upload-filled /></el-icon>
+                  <div class="el-upload__text">点击选择新封面图片</div>
+                  <div class="el-upload__tip">支持JPG, PNG, GIF, WEBP格式图片，大小不超过5MB</div>
+                </div>
+                <div v-else class="selected-file is-cover">
+                  <img class="cover-preview" :src="newCoverPreviewUrl" alt="封面预览">
+                  <div class="cover-actions">
+                    <span class="file-name">{{ coverFile.name }}</span>
+                    <el-button size="small" type="danger" @click.stop="removeNewCover" :disabled="coverUploading">移除</el-button>
+                  </div>
+                </div>
+              </el-upload>
+            </el-form-item>
+          </el-form>
+        </el-scrollbar>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="closeCoverDialog" :disabled="coverUploading">取消</el-button>
+            <el-button type="primary" @click="submitCoverUpdate" :loading="coverUploading">
+              {{ coverUploading ? '更新中...' : '更新封面' }}
             </el-button>
           </span>
         </template>
@@ -573,7 +800,7 @@ const deleteVideo = async (id) => {
   margin-bottom: 1rem;
 }
 
-.video-uploader {
+.video-uploader, .cover-uploader {
   width: 100%;
 }
 
@@ -588,6 +815,11 @@ const deleteVideo = async (id) => {
   background-color: #f8f9fa;
   cursor: pointer;
   transition: all 0.3s;
+}
+
+.upload-area.is-cover {
+  padding: 1.5rem;
+  min-height: 120px;
 }
 
 .upload-area:hover {
@@ -625,6 +857,28 @@ const deleteVideo = async (id) => {
   background-color: #f8f9fa;
 }
 
+.selected-file.is-cover {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cover-preview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f0f0f0;
+}
+
 .file-icon {
   font-size: 24px;
   color: #409eff;
@@ -648,5 +902,33 @@ const deleteVideo = async (id) => {
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
   font-weight: 500;
+}
+
+.upload-dialog-fullscreen {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  margin: 5vh auto !important;
+}
+
+:deep(.el-dialog__body) {
+  overflow: auto;
+  padding: 20px;
+  flex: 1;
+}
+
+:deep(.el-dialog__header) {
+  padding: 15px 20px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 15px 20px;
+  border-top: 1px solid #ebeef5;
 }
 </style> 

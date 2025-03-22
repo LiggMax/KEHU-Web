@@ -1,11 +1,5 @@
 import request from '../utils/request.js'
 
-/**
- * 获取用户的视频列表
- */
-export const getUserVideosService = () => {
-    return request.get('/video/list')
-}
 
 /**
  * 获取所有视频列表
@@ -14,24 +8,7 @@ export const getAllVideosService = () => {
     return request.get('/video/all')
 }
 
-/**
- * 上传视频
- * @param {Object} data 包含标题、描述和视频文件
- * @param {Function} onProgress 进度回调函数
- */
-export const uploadVideoService = (data, onProgress) => {
-    const formData = new FormData()
-    formData.append('title', data.title)
-    formData.append('description', data.description || '')
-    formData.append('videoFile', data.videoFile)
-    
-    return request.post('/video/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: onProgress
-    })
-}
+
 
 /**
  * 删除视频
@@ -55,4 +32,20 @@ export const getVideoById = (videoId) => {
  */
 export const updateVideoService = (data) => {
     return request.put(`/video/${data.id}`, data)
+}
+
+/**
+ * 更新视频封面
+ * @param {Number} videoId 视频ID
+ * @param {File} coverFile 封面文件
+ */
+export const updateCoverService = (videoId, coverFile) => {
+    const formData = new FormData()
+    formData.append('coverFile', coverFile)
+    
+    return request.post(`/video/${videoId}/cover`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
 } 

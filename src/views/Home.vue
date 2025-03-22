@@ -94,7 +94,7 @@ const goToUserCenter = () => {
               @click="viewVideo(video.id)"
             >
               <div class="video-cover">
-                <img :src="video.coverUrl" alt="视频封面">
+                <img :src="video.videoImg || video.coverUrl" alt="视频封面">
               </div>
               <div class="video-info">
                 <h3>{{ video.title }}</h3>
