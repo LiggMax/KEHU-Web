@@ -28,10 +28,15 @@ export const getVideoById = (videoId) => {
 
 /**
  * 更新视频信息
- * @param {Object} data 包含视频ID、标题和描述
+ * @param {Object} data 包含视频ID、标题、描述和分类
  */
 export const updateVideoService = (data) => {
-    return request.put(`/video/${data.id}`, data)
+    return request.put(`/video/${data.id}`, {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        category: data.category
+    })
 }
 
 /**

@@ -23,13 +23,14 @@ export const getUserVideosService = () => {
 
 /**
  * 上传视频
- * @param {Object} data 包含标题、描述、视频文件和封面文件
+ * @param {Object} data 包含标题、描述、分类、视频文件和封面文件
  * @param {Function} onProgress 进度回调函数
  */
 export const uploadVideoService = (data, onProgress) => {
     const formData = new FormData()
     formData.append('title', data.title)
     formData.append('description', data.description || '')
+    formData.append('category', data.category || '')
     formData.append('videoFile', data.videoFile)
 
     // 如果有封面文件，也添加到表单

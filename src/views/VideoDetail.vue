@@ -148,6 +148,7 @@ onUnmounted(() => {
         <div class="video-meta">
           <span class="views">{{ video.viewCount }} 次观看</span>
           <span class="date">发布于: {{ formatDate(video.createTime) }}</span>
+          <span class="category" v-if="video.category">分类: {{ video.category }}</span>
         </div>
         
         <div class="video-description">
@@ -236,6 +237,7 @@ onUnmounted(() => {
 
 .video-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
   color: #666;
   margin-bottom: 2rem;
@@ -244,6 +246,14 @@ onUnmounted(() => {
 }
 
 .views {
+  font-weight: 500;
+}
+
+.category {
+  background-color: #f0f9f4;
+  color: #42b883;
+  padding: 2px 10px;
+  border-radius: 15px;
   font-weight: 500;
 }
 

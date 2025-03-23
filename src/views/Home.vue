@@ -102,6 +102,7 @@ const goToUserCenter = () => {
                 <div class="video-meta">
                   <span class="views"><i class="el-icon-view"></i> {{ video.viewCount }} 次观看</span>
                   <span class="date">{{ formatDate(video.createTime) }}</span>
+                  <span class="category" v-if="video.category">{{ video.category }}</span>
                 </div>
               </div>
             </div>
@@ -121,7 +122,6 @@ const goToUserCenter = () => {
               </svg>
             </div>
             <p>暂无视频内容</p>
-            <el-button v-if="loggedIn" type="primary" @click="goToUserCenter">上传视频</el-button>
           </div>
         </template>
       </el-skeleton>
@@ -309,13 +309,27 @@ const goToUserCenter = () => {
   flex: 1;
 }
 
+/* 视频元数据显示 */
 .video-meta {
   display: flex;
-  justify-content: space-between;
-  color: #888;
+  flex-wrap: wrap;
+  gap: 10px;
   font-size: 0.85rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #f5f5f5;
+  color: #666;
+  margin-top: 8px;
+}
+
+.views, .date, .category {
+  display: inline-flex;
+  align-items: center;
+}
+
+.category {
+  background-color: #f0f9f4;
+  color: #42b883;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
 }
 
 .empty-videos {
