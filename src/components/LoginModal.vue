@@ -102,19 +102,23 @@ const handleClose = () => {
   <el-dialog
     :title="isLogin ? '用户登录' : '用户注册'"
     v-model="dialogVisible"
-    width="30%"
+    width="90%"
     :show-close="false"
     @close="handleClose"
+    center
+    class="login-dialog"
   >
-    <el-form @submit.prevent="isLogin ? handleLogin : handleRegister">
-      <el-form-item label="用户名">
+    <el-form @submit.prevent="isLogin ? handleLogin : handleRegister" class="login-form">
+      <el-form-item>
+        <div class="form-label">用户名</div>
         <el-input
           v-model="username"
           placeholder="请输入用户名"
           :prefix-icon="'User'"
         />
       </el-form-item>
-      <el-form-item label="密码">
+      <el-form-item>
+        <div class="form-label">密码</div>
         <el-input
           type="password"
           v-model="password"
@@ -123,7 +127,8 @@ const handleClose = () => {
           show-password
         />
       </el-form-item>
-      <el-form-item label="确认密码" v-if="!isLogin">
+      <el-form-item v-if="!isLogin">
+        <div class="form-label">确认密码</div>
         <el-input
           type="password"
           v-model="confirmPassword"
@@ -152,53 +157,57 @@ const handleClose = () => {
 </template>
 
 <style scoped>
+.login-dialog {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
 :deep(.el-dialog) {
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  width: 90% !important;
+  max-width: 360px;
+  margin: 0 auto !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 :deep(.el-dialog__header) {
   margin: 0;
-  padding: 20px;
+  padding: 20px 16px;
   background-color: #f5f7fa;
   border-bottom: 1px solid #e4e7ed;
+  text-align: center;
 }
 
 :deep(.el-dialog__title) {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #2c3e50;
 }
 
 :deep(.el-dialog__body) {
-  padding: 30px 20px;
+  padding: 30px 24px;
 }
 
-:deep(.el-form) {
+.login-form {
   width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
 }
 
 :deep(.el-form-item) {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-:deep(.el-form-item__label) {
-  width: 70px;
-  text-align: right;
-  margin-right: 8px;
+.form-label {
+  margin-bottom: 8px;
   font-weight: 500;
   color: #2c3e50;
-}
-
-:deep(.el-form-item__content) {
-  margin-left: 78px;
+  font-size: 14px;
 }
 
 :deep(.el-input__wrapper) {
   box-shadow: 0 0 0 1px #dcdfe6 inset;
   transition: all 0.3s ease;
+  border-radius: 6px;
 }
 
 :deep(.el-input__wrapper:hover) {
@@ -209,21 +218,36 @@ const handleClose = () => {
   box-shadow: 0 0 0 1px #409eff inset;
 }
 
+:deep(.el-input__inner) {
+  height: 40px;
+}
+
 .button-group {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .button-group .el-button {
-  min-width: 100px;
+  flex: 1;
+  height: 40px;
+  font-size: 16px;
+  border-radius: 6px;
   transition: all 0.3s ease;
+}
+
+:deep(.el-button--primary) {
+  background-color: #409eff;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #66b1ff;
 }
 
 .toggle-form {
   text-align: center;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 :deep(.el-link) {
@@ -233,5 +257,29 @@ const handleClose = () => {
 
 :deep(.el-link:hover) {
   text-decoration: underline;
+}
+
+@media screen and (max-width: 480px) {
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin-top: 10vh !important;
+  }
+  
+  :deep(.el-dialog__body) {
+    padding: 20px;
+  }
+  
+  .button-group {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .button-group .el-button {
+    width: 100%;
+  }
+  
+  :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
 }
 </style>

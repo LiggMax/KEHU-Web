@@ -37,6 +37,11 @@ const router = createRouter({
       path: '/video/:id',
       name: 'VideoDetail',
       component: () => import('../views/VideoDetail.vue')
+    },
+    {
+      path: '/search',
+      name: 'SearchResults',
+      component: () => import('../views/SearchResults.vue')
     }
   ]
 })
