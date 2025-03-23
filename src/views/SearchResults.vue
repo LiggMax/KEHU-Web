@@ -171,7 +171,7 @@ const formatViewCount = (count) => {
 };
 
 // 监听路由参数变化
-watch(() => route.query.q, (newQuery) => {
+watch(() => route.query.q || route.query.keyword, (newQuery) => {
   if (newQuery) {
     currentPage.value = 1;
     fetchSearchResults(newQuery);
@@ -180,7 +180,7 @@ watch(() => route.query.q, (newQuery) => {
 
 onMounted(() => {
   // 从URL获取搜索查询
-  const query = route.query.q;
+  const query = route.query.q || route.query.keyword;
   if (query) {
     fetchSearchResults(query);
   }

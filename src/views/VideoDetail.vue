@@ -242,6 +242,14 @@ onUnmounted(() => {
     videoElement.value.src = ''
   }
 })
+
+// 根据分类搜索
+const searchByCategory = (category) => {
+  router.push({
+    path: '/search',
+    query: { keyword: category }
+  })
+}
 </script>
 
 <template>
@@ -286,7 +294,9 @@ onUnmounted(() => {
         <div class="video-meta">
           <span class="views">{{ video.viewCount }} 次观看</span>
           <span class="date">发布于: {{ formatDate(video.createTime) }}</span>
-          <span class="category" v-if="video.category">分类: {{ video.category }}</span>
+          <span class="category" v-if="video.category">
+            分类: <el-tag size="small" type="success" @click="searchByCategory(video.category)" class="clickable-tag">{{ video.category }}</el-tag>
+          </span>
         </div>
         
         <div class="video-description">
@@ -746,5 +756,15 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 0.5rem;
   }
+}
+
+.clickable-tag {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clickable-tag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style> 

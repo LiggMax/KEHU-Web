@@ -21,4 +21,20 @@ export const getVideoById = (videoId) => {
  */
 export const incrementViewCountService = (videoId) => {
     return request.post(`/video/${videoId}/view`)
+}
+
+/**
+ * 根据分类获取视频
+ * @param {String} category 分类名称
+ * @param {Number} page 页码
+ * @param {Number} size 每页条数
+ */
+export const getVideosByCategoryService = (category, page = 1, size = 10) => {
+    return request.get('/video/category', {
+        params: {
+            category,
+            page,
+            size
+        }
+    })
 } 
