@@ -9,7 +9,7 @@ export const searchService = async (query, page = 1, size = 10) => {
     url: '/video/search',
     method: 'get',
     params: {
-      q: query,
+      keyword: query,
       page,
       size
     }

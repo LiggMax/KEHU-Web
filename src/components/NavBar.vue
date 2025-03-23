@@ -152,7 +152,6 @@ const handleSelect = (item) => {
 
       <div class="nav-links">
         <router-link to="/" class="nav-link">首页</router-link>
-        <router-link to="/about" class="nav-link">关于</router-link>
         <router-link to="/services" class="nav-link">服务</router-link>
         <router-link to="/contact" class="nav-link">联系我们</router-link>
         
