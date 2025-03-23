@@ -48,4 +48,12 @@ export const updateCoverService = (videoId, coverFile) => {
             'Content-Type': 'multipart/form-data'
         }
     })
+}
+
+/**
+ * 增加视频观看次数
+ * @param {Number} videoId 视频ID
+ */
+export const incrementViewCountService = (videoId) => {
+    return request.post(`/video/${videoId}/view`)
 } 

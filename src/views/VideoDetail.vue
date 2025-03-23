@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getVideoById } from '../api/video.js'
+import { getVideoById, incrementViewCountService } from '../api/video.js'
 import { getUserInfo, isLoggedIn } from '../utils/auth.js'
 
 const route = useRoute()
@@ -13,6 +13,7 @@ const loading = ref(true)
 const currentUser = ref(null)
 const videoElement = ref(null)
 const videoError = ref(false)
+const viewCountUpdated = ref(false)
 
 onMounted(() => {
   // 检查是否登录
@@ -36,7 +37,6 @@ const loadVideoDetails = async () => {
     const res = await getVideoById(videoId.value)
     if (res.code === 200 && res.data) {
       video.value = res.data
-      // 增加观看次数逻辑可以在这里实现
     } else {
       ElMessage.error(res.message || '视频不存在')
       router.push('/')
@@ -74,6 +74,28 @@ const handleVideoError = (e) => {
   ElMessage.error('视频播放失败，可能是格式不支持或文件不存在')
 }
 
+// 监听视频播放开始
+const handleVideoPlay = () => {
+  // 仅在第一次播放时增加观看次数
+  if (!viewCountUpdated.value) {
+    incrementViewCount()
+    viewCountUpdated.value = true
+  }
+}
+
+// 增加视频观看次数
+const incrementViewCount = async () => {
+  try {
+    await incrementViewCountService(videoId.value)
+    // 更新本地视频数据的观看次数
+    if (video.value) {
+      video.value.viewCount += 1
+    }
+  } catch (error) {
+    console.error('更新观看次数失败', error)
+  }
+}
+
 // 在组件卸载时停止视频播放
 onUnmounted(() => {
   if (videoElement.value) {
@@ -104,6 +126,7 @@ onUnmounted(() => {
           :src="video.filePath"
           :poster="video.videoImg || video.coverUrl"
           @error="handleVideoError"
+          @play="handleVideoPlay"
         ></video>
         
         <div v-if="videoError" class="video-error-overlay">
