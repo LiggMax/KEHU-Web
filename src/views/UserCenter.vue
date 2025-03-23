@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, onUnmounted } from 'vue';
-import { ElMessage, ElUpload, ElMessageBox } from 'element-plus';
+import { ElMessage, ElUpload, ElMessageBox, ElNotification } from 'element-plus';
 import { isLoggedIn, getUserInfo } from '../utils/auth.js';
 import { useRouter } from 'vue-router';
 import { UploadFilled, VideoCamera } from '@element-plus/icons-vue';
@@ -254,15 +254,32 @@ const clearUploadForm = () => {
 };
 
 // 删除视频
-const deleteVideo = async (id) => {
+const deleteVideo = async (video) => {
   try {
+    const id = video.id;
+    // 使用更详细的确认信息
+    const confirmMessage = `
+      <div style="text-align: left; margin-bottom: 10px;">
+        <p>确定要删除视频<strong>《${video.title}》</strong>吗？</p>
+        <p>此操作将同时：</p>
+        <ul style="margin: 5px 0; padding-left: 20px;">
+          <li>从数据库中删除视频记录</li>
+          <li>删除服务器上存储的视频文件</li>
+          ${video.videoImg ? '<li>删除服务器上的视频封面图片</li>' : ''}
+        </ul>
+        <p style="color: #F56C6C;">⚠️ 注意：此操作不可撤销！</p>
+      </div>
+    `;
+
     const confirmResult = await ElMessageBox.confirm(
-      '确定要删除这个视频吗？此操作不可撤销。',
-      '删除提示',
+      confirmMessage,
+      '删除视频确认',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确认删除',
         cancelButtonText: '取消',
         type: 'warning',
+        dangerouslyUseHTMLString: true,
+        customClass: 'delete-confirm-dialog'
       }
     );
     
@@ -270,8 +287,36 @@ const deleteVideo = async (id) => {
       const res = await deleteVideoService(id);
       
       if (res.code === 200) {
-        videoList.value = videoList.value.filter(video => video.id !== id);
-        ElMessage.success('删除成功');
+        // 从列表中移除已删除的视频
+        videoList.value = videoList.value.filter(item => item.id !== id);
+        
+        // 获取被删除的视频信息
+        const videoData = res.data;
+        const videoTitle = videoData.title || '未知视频';
+        
+        // 准备删除结果消息
+        let resultMessage = `视频《${videoTitle}》已从数据库中删除`;
+        
+        // 添加文件删除状态信息
+        if (videoData.videoFileDeleted) {
+          resultMessage += '，视频文件已成功删除';
+        } else if (videoData.dbDeleted) {
+          resultMessage += '，但视频文件删除失败';
+        }
+        
+        if (videoData.coverFileDeleted && video.videoImg) {
+          resultMessage += '，封面文件已成功删除';
+        } else if (!videoData.coverFileDeleted && video.videoImg && videoData.dbDeleted) {
+          resultMessage += '，但封面文件删除失败';
+        }
+        
+        // 显示详细的删除结果
+        ElNotification({
+          title: '删除结果',
+          message: resultMessage,
+          type: videoData.success ? 'success' : 'warning',
+          duration: 5000
+        });
       } else {
         ElMessage.error(res.message || '删除失败');
       }
@@ -457,7 +502,7 @@ onUnmounted(() => {
               <div class="video-actions">
                 <el-button size="small" type="primary" @click="openCoverDialog(video.id)">更新封面</el-button>
                 <el-button size="small" type="warning" @click="openEditDialog(video)">编辑</el-button>
-                <el-button size="small" type="danger" @click="deleteVideo(video.id)">删除</el-button>
+                <el-button size="small" type="danger" @click="deleteVideo(video)">删除</el-button>
               </div>
             </div>
           </div>
@@ -1249,5 +1294,37 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 5px;
+}
+
+/* 删除确认对话框样式 */
+:deep(.delete-confirm-dialog) {
+  max-width: 450px;
+}
+
+:deep(.delete-confirm-dialog .el-message-box__header) {
+  padding-bottom: 10px;
+}
+
+:deep(.delete-confirm-dialog .el-message-box__title) {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+:deep(.delete-confirm-dialog .el-message-box__content) {
+  padding: 20px;
+}
+
+:deep(.delete-confirm-dialog .el-message-box__btns) {
+  padding: 10px 20px 20px;
+}
+
+:deep(.delete-confirm-dialog .el-button--primary) {
+  background-color: #F56C6C;
+  border-color: #F56C6C;
+}
+
+:deep(.delete-confirm-dialog .el-button--primary:hover) {
+  background-color: #f78989;
+  border-color: #f78989;
 }
 </style> 

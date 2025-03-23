@@ -1,9 +1,11 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getVideoById, incrementViewCountService } from '../api/video.js'
+import { addCommentService, getCommentsByVideoIdService, countCommentsByVideoIdService, deleteCommentService, likeCommentService } from '../api/comment.js'
 import { getUserInfo, isLoggedIn } from '../utils/auth.js'
+import LikeIcon from '../assets/点赞.svg'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +17,13 @@ const videoElement = ref(null)
 const videoError = ref(false)
 const viewCountUpdated = ref(false)
 
+// 评论相关数据
+const commentContent = ref('')
+const comments = ref([])
+const commentLoading = ref(false)
+const commentSubmitting = ref(false)
+const commentCount = ref(0)
+
 onMounted(() => {
   // 检查是否登录
   if (isLoggedIn()) {
@@ -24,6 +33,8 @@ onMounted(() => {
   // 加载视频信息
   if (videoId.value) {
     loadVideoDetails()
+    // 加载评论
+    loadComments()
   } else {
     ElMessage.error('无效的视频ID')
     router.push('/')
@@ -55,6 +66,18 @@ const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   return date.toLocaleDateString()
+}
+
+// 格式化日期，带时间
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 // 返回首页
@@ -94,6 +117,127 @@ const incrementViewCount = async () => {
   } catch (error) {
     console.error('更新观看次数失败', error)
   }
+}
+
+// 加载评论
+const loadComments = async () => {
+  commentLoading.value = true
+  try {
+    // 加载评论数量
+    const countRes = await countCommentsByVideoIdService(videoId.value)
+    if (countRes.code === 200) {
+      commentCount.value = countRes.data
+    }
+    
+    // 加载评论列表
+    const res = await getCommentsByVideoIdService(videoId.value)
+    if (res.code === 200 && res.data) {
+      comments.value = res.data
+    } else {
+      comments.value = []
+    }
+  } catch (error) {
+    console.error('获取评论失败', error)
+    ElMessage.error('获取评论失败，请稍后再试')
+  } finally {
+    commentLoading.value = false
+  }
+}
+
+// 提交评论
+const submitComment = async () => {
+  if (!isLoggedIn()) {
+    ElMessage.warning('请先登录再评论')
+    return
+  }
+  
+  if (!commentContent.value.trim()) {
+    ElMessage.warning('评论内容不能为空')
+    return
+  }
+  
+  commentSubmitting.value = true
+  try {
+    const res = await addCommentService({
+      content: commentContent.value,
+      videoId: videoId.value
+    })
+    
+    if (res.code === 200 && res.data) {
+      // 添加到评论列表
+      comments.value.unshift(res.data)
+      // 更新评论数量
+      commentCount.value++
+      // 清空评论输入框
+      commentContent.value = ''
+      ElMessage.success('评论发布成功')
+    } else {
+      ElMessage.error(res.message || '评论失败')
+    }
+  } catch (error) {
+    console.error('发布评论失败', error)
+    ElMessage.error('发布评论失败，请稍后再试')
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+// 删除评论
+const deleteComment = async (id, index) => {
+  try {
+    const result = await ElMessageBox.confirm(
+      '确定要删除这条评论吗？此操作不可撤销',
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    if (result === 'confirm') {
+      const res = await deleteCommentService(id)
+      if (res.code === 200) {
+        // 从列表中移除
+        comments.value.splice(index, 1)
+        // 更新评论数量
+        commentCount.value--
+        ElMessage.success('删除成功')
+      } else {
+        ElMessage.error(res.message || '删除失败')
+      }
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除评论失败', error)
+      ElMessage.error('删除评论失败，请稍后再试')
+    }
+  }
+}
+
+// 给评论点赞
+const likeComment = async (id, index) => {
+  try {
+    const res = await likeCommentService(id)
+    if (res.code === 200) {
+      // 更新本地评论点赞数
+      comments.value[index].likes++
+      ElMessage.success('点赞成功')
+    } else {
+      ElMessage.error(res.message || '点赞失败')
+    }
+  } catch (error) {
+    console.error('点赞失败', error)
+    ElMessage.error('点赞失败，请稍后再试')
+  }
+}
+
+// 是否可以删除评论
+const canDeleteComment = (userId) => {
+  return currentUser.value && (
+    currentUser.value.userId === userId || 
+    (video.value && currentUser.value.userId === video.value.userId) // 视频作者也可以删除
+  )
 }
 
 // 在组件卸载时停止视频播放
@@ -168,6 +312,86 @@ onUnmounted(() => {
             <div class="uploader-details">
               <span class="uploader-name">用户 ID: {{ video.userId }}</span>
             </div>
+          </div>
+        </div>
+        
+        <!-- 评论区 -->
+        <div class="comments-section">
+          <h3>评论区 ({{ commentCount }})</h3>
+          
+          <!-- 评论框 -->
+          <div class="comment-form" v-if="isLoggedIn()">
+            <div class="comment-avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#42b883" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="comment-input-wrapper">
+              <el-input
+                v-model="commentContent"
+                type="textarea"
+                :rows="3"
+                placeholder="写下你的评论..."
+                :disabled="commentSubmitting"
+                maxlength="1000"
+                show-word-limit
+              ></el-input>
+              <div class="comment-actions">
+                <el-button 
+                  type="primary" 
+                  @click="submitComment" 
+                  :loading="commentSubmitting"
+                  :disabled="!commentContent.trim()"
+                >发表评论</el-button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="login-to-comment" v-else>
+            <p>请先 <el-button type="text" @click="router.push('/')">登录</el-button> 后发表评论</p>
+          </div>
+          
+          <!-- 评论列表 -->
+          <div class="comments-list" v-if="!commentLoading">
+            <div v-if="comments.length === 0" class="no-comments">
+              <p>暂无评论，快来发表第一条评论吧!</p>
+            </div>
+            
+            <div v-else class="comment-item" v-for="(comment, index) in comments" :key="comment.id">
+              <div class="comment-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#42b883" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span class="comment-author">{{ comment.username || `用户ID: ${comment.userId}` }}</span>
+                  <span class="comment-time">{{ formatDateTime(comment.createTime) }}</span>
+                </div>
+                <div class="comment-text">{{ comment.content }}</div>
+                <div class="comment-footer">
+                  <div class="comment-likes" @click="likeComment(comment.id, index)">
+                    <img :src="LikeIcon" alt="点赞" class="like-icon" />
+                    <span>{{ comment.likes || 0 }}</span>
+                  </div>
+                  <div class="comment-actions">
+                    <el-button 
+                      v-if="canDeleteComment(comment.userId)" 
+                      type="danger" 
+                      size="small" 
+                      text 
+                      @click="deleteComment(comment.id, index)"
+                    >删除</el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="comments-loading">
+            <el-skeleton animated :rows="3" />
           </div>
         </div>
       </div>
@@ -347,6 +571,145 @@ onUnmounted(() => {
   max-width: 80%;
 }
 
+/* 评论区样式 */
+.comments-section {
+  margin-top: 2.5rem;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 2rem;
+}
+
+.comments-section h3 {
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.comment-form {
+  display: flex;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.comment-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background-color: #f0f9f4;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.comment-input-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.login-to-comment {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.comment-item {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.comment-author {
+  font-weight: 500;
+  color: #333;
+}
+
+.comment-time {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.comment-text {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  white-space: pre-line;
+}
+
+.comment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.comment-likes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.comment-likes:hover {
+  background-color: #f0f0f0;
+  color: #42b883;
+}
+
+.like-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+
+.comment-likes:hover .like-icon {
+  transform: scale(1.2);
+}
+
+.no-comments {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.comments-loading {
+  margin-top: 1rem;
+}
+
 @media (max-width: 768px) {
   .video-detail-container {
     margin: 1rem auto;
@@ -362,6 +725,32 @@ onUnmounted(() => {
   
   .video-title {
     font-size: 1.5rem;
+  }
+  
+  .comment-form {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .comment-avatar {
+    margin-bottom: 0.5rem;
+  }
+  
+  .comment-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .comment-header {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .comment-footer {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 </style> 

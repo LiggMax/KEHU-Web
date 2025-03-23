@@ -128,10 +128,10 @@ const goToUserCenter = () => {
     </section>
 
     <section class="features">
-      <h2>平台特性</h2>
+      <h2>视频平台</h2>
       <div class="feature-grid">
         <div class="feature-card">
-          <h3>高清视频</h3>
+          <h3>精彩视频</h3>
           <p>支持多种格式高清视频上传和播放</p>
         </div>
         <div class="feature-card">
