@@ -85,11 +85,6 @@ const goBack = () => {
   router.push('/')
 }
 
-// 返回用户中心
-const goToUserCenter = () => {
-  router.push('/user')
-}
-
 // 监听视频播放错误
 const handleVideoError = (e) => {
   console.error('视频播放错误:', e)
@@ -258,7 +253,6 @@ onUnmounted(() => {
     <template v-else-if="video">
       <div class="video-navigation">
         <el-button @click="goBack" plain>返回首页</el-button>
-        <el-button @click="goToUserCenter" type="primary" v-if="isLoggedIn()">我的视频</el-button>
       </div>
     
       <div class="video-player-container">
