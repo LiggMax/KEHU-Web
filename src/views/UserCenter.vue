@@ -3,9 +3,8 @@ import { ref, reactive, onMounted, computed, onUnmounted } from 'vue';
 import { ElMessage, ElUpload, ElMessageBox } from 'element-plus';
 import { isLoggedIn, getUserInfo } from '../utils/auth.js';
 import { useRouter } from 'vue-router';
-import { deleteVideoService, updateCoverService, updateVideoService } from '../api/video.js';
 import { UploadFilled, VideoCamera } from '@element-plus/icons-vue';
-import { getUserVideosService, uploadVideoService } from '@/api/user.js'
+import { getUserVideosService, uploadVideoService, deleteVideoService, updateVideoService, updateCoverService } from '@/api/user.js'
 
 const router = useRouter();
 const currentUser = ref(null);
