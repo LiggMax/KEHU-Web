@@ -8,6 +8,14 @@ import { getAdminInfoService } from '@/api/admin.js';
 const router = useRouter();
 const currentUser = ref(null);
 
+// 统计数据
+const statistics = ref({
+  userCount: 0,
+  videoCount: 0,
+  commentCount: 0,
+  todayVisits: 0
+});
+
 onMounted(async () => {
   // 获取当前用户信息
   const userInfo = getUserInfo();
@@ -35,100 +43,124 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="admin-dashboard">
-    <div class="dashboard-header">
-      <h1>管理后台</h1>
-      <div class="user-info">
-        欢迎，{{ currentUser?.nickname || currentUser?.username }}
-      </div>
-    </div>
-    
-    <div class="dashboard-content">
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-card class="dashboard-card">
-            <template #header>
-              <div class="card-header">
-                <span>用户管理</span>
-              </div>
-            </template>
-            <div class="card-content">
-              <p>管理用户账号、权限等</p>
+  <div class="dashboard-container">
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="statistics-row">
+      <el-col :span="6">
+        <el-card shadow="hover" class="statistics-card">
+          <template #header>
+            <div class="card-header">
+              <span>用户总数</span>
+              <el-icon><User /></el-icon>
             </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :span="8">
-          <el-card class="dashboard-card">
-            <template #header>
-              <div class="card-header">
-                <span>内容管理</span>
-              </div>
-            </template>
-            <div class="card-content">
-              <p>管理视频、评论等内容</p>
+          </template>
+          <div class="card-value">{{ statistics.userCount }}</div>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="6">
+        <el-card shadow="hover" class="statistics-card">
+          <template #header>
+            <div class="card-header">
+              <span>视频总数</span>
+              <el-icon><VideoPlay /></el-icon>
             </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :span="8">
-          <el-card class="dashboard-card">
-            <template #header>
-              <div class="card-header">
-                <span>系统设置</span>
-              </div>
-            </template>
-            <div class="card-content">
-              <p>系统配置、日志等</p>
+          </template>
+          <div class="card-value">{{ statistics.videoCount }}</div>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="6">
+        <el-card shadow="hover" class="statistics-card">
+          <template #header>
+            <div class="card-header">
+              <span>评论总数</span>
+              <el-icon><ChatDotRound /></el-icon>
             </div>
+          </template>
+          <div class="card-value">{{ statistics.commentCount }}</div>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="6">
+        <el-card shadow="hover" class="statistics-card">
+          <template #header>
+            <div class="card-header">
+              <span>今日访问</span>
+              <el-icon><View /></el-icon>
+            </div>
+          </template>
+          <div class="card-value">{{ statistics.todayVisits }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 图表区域 -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :span="16">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>访问趋势</span>
+            </div>
+          </template>
+          <div class="chart-container">
+            <!-- 这里可以添加图表组件 -->
+            <div class="chart-placeholder">访问趋势图表</div>
+          </div>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="8">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>内容分布</span>
+            </div>
+          </template>
+          <div class="chart-container">
+            <!-- 这里可以添加图表组件 -->
+            <div class="chart-placeholder">内容分布图表</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 最近活动 -->
+    <el-card shadow="hover" class="activity-card">
+      <template #header>
+        <div class="card-header">
+          <span>最近活动</span>
+        </div>
+      </template>
+      <el-timeline>
+        <el-timeline-item
+          v-for="(activity, index) in 4"
+          :key="index"
+          :timestamp="'2024-03-' + (index + 1)"
+          placement="top"
+        >
+          <el-card>
+            <h4>系统更新</h4>
+            <p>系统进行了例行维护和更新</p>
           </el-card>
-        </el-col>
-      </el-row>
-    </div>
+        </el-timeline-item>
+      </el-timeline>
+    </el-card>
   </div>
 </template>
 
 <style scoped>
-.admin-dashboard {
+.dashboard-container {
   padding: 20px;
-  min-height: 100vh;
-  background-color: #f5f7fa;
 }
 
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.dashboard-header h1 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 24px;
-}
-
-.user-info {
-  color: #606266;
-  font-size: 16px;
-}
-
-.dashboard-content {
-  margin-top: 20px;
-}
-
-.dashboard-card {
+.statistics-row {
   margin-bottom: 20px;
-  transition: all 0.3s ease;
 }
 
-.dashboard-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.statistics-card {
+  height: 120px;
 }
 
 .card-header {
@@ -137,26 +169,58 @@ onMounted(async () => {
   align-items: center;
 }
 
-.card-header span {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
+.card-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #303133;
+  text-align: center;
+  margin-top: 10px;
 }
 
-.card-content {
-  color: #606266;
-  line-height: 1.6;
+.chart-row {
+  margin-bottom: 20px;
+}
+
+.chart-card {
+  height: 400px;
+}
+
+.chart-container {
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-placeholder {
+  color: #909399;
+  font-size: 14px;
+}
+
+.activity-card {
+  margin-bottom: 20px;
+}
+
+:deep(.el-timeline-item__content) {
+  h4 {
+    margin: 0;
+    color: #303133;
+  }
+  
+  p {
+    margin: 5px 0 0;
+    color: #606266;
+  }
 }
 
 @media screen and (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
-  }
-  
   .el-col {
     width: 100%;
+  }
+  
+  .statistics-card,
+  .chart-card {
+    margin-bottom: 20px;
   }
 }
 </style> 
