@@ -42,6 +42,20 @@ const router = createRouter({
       path: '/search',
       name: 'SearchResults',
       component: () => import('../views/SearchResults.vue')
+    },
+    {
+      path: '/admin/login',
+      name: 'AdminLogin',
+      component: () => import('../views/admin/AdminLogin.vue')
+    },
+    {
+      path: '/admin/dashboard',
+      name: 'AdminDashboard',
+      component: () => import('../views/admin/AdminDashboard.vue'),
+      meta: {
+        requiresAuth: true,
+        requiresAdmin: true
+      }
     }
   ]
 })
@@ -58,8 +72,23 @@ router.beforeEach((to, from, next) => {
         query: { redirect: to.fullPath }
       })
     } else {
-      // 已登录，继续导航
-      next()
+      // 检查是否需要管理员权限
+      if (to.matched.some(record => record.meta.requiresAdmin)) {
+        const userInfo = JSON.parse(localStorage.getItem('login_user'));
+        if (userInfo.role !== 'admin') {
+          // 不是管理员，重定向到首页
+          next({
+            path: '/',
+            query: { redirect: to.fullPath }
+          })
+        } else {
+          // 是管理员，允许访问
+          next()
+        }
+      } else {
+        // 不需要管理员权限，允许访问
+        next()
+      }
     }
   } else {
     // 不需要认证的路由，直接导航

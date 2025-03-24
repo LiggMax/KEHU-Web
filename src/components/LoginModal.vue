@@ -30,7 +30,6 @@ const handleLogin = async () => {
     ElMessage.warning('用户名和密码不能为空');
     return;
   }
-
   loading.value = true;
   try {
     const res = await loginService(username.value, password.value);
@@ -46,9 +45,6 @@ const handleLogin = async () => {
         emit('login-success');
       }
     }
-  } catch (error) {
-    console.error('登录失败', error);
-    ElMessage.error('登录失败，请检查用户名和密码');
   } finally {
     loading.value = false;
   }
