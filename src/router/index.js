@@ -64,7 +64,7 @@ router.beforeEach((to, from, next) => {
   // 如果路由需要管理员认证
   if (to.matched.some(record => record.meta.requiresAdminAuth)) {
     // 检查是否已登录为管理员
-    if (!localStorage.getItem('admin_token')) {
+    if (!localStorage.getItem('isAdminLoggedIn')) {
       // 未登录，重定向到管理员登录页
       next({
         path: '/admin/login',

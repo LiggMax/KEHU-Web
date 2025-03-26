@@ -39,42 +39,44 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import {ElMessage} from "element-plus";
+import {adminLoginService} from "@/api/admin/login.js";
 
 const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 
-const loginForm = reactive({
+const loginForm = ref({
   username: '',
   password: ''
 })
 
 const handleLogin = async () => {
+  if (!loginForm.value.username || !loginForm.value.password) {
+    ElMessage.warning('请输入用户名和密码')
+    return
+  }
+
   loading.value = true
   error.value = ''
   
   try {
-    // TODO: 调用后端登录API
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(loginForm)
-    })
-    
-    const data = await response.json()
-    
-    if (response.ok) {
-      // 登录成功，存储token
-      localStorage.setItem('admin_token', data.token)
-      // 跳转到管理员首页
-      router.push('/admin/dashboard')
+    const res = await adminLoginService(loginForm.value)
+    if (res.code === 200) {
+      // 登录成功，记录登录状态
+      localStorage.setItem('isAdminLoggedIn', 'true')
+      
+      ElMessage.success('登录成功')
+      // 跳转到管理后台
+      await router.push('/admin/dashboard')
     } else {
-      error.value = data.message || '登录失败，请检查用户名和密码'
+      error.value = res.message || '登录失败'
+      ElMessage.error(error.value)
     }
   } catch (err) {
+    console.error('登录错误:', err)
     error.value = '登录失败，请稍后重试'
+    ElMessage.error(error.value)
   } finally {
     loading.value = false
   }
