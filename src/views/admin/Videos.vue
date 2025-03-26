@@ -9,24 +9,8 @@
       </template>
       
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="标题">
+        <el-form-item label="视频标题">
           <el-input v-model="searchForm.title" placeholder="请输入视频标题" clearable></el-input>
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="searchForm.categoryId" placeholder="请选择分类" clearable>
-            <el-option
-              v-for="item in categories"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="正常" :value="1"></el-option>
-            <el-option label="下架" :value="0"></el-option>
-          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -36,32 +20,23 @@
       
       <el-table :data="videoList" v-loading="loading" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="封面" width="120">
-          <template #default="scope">
-            <el-image
-              :src="scope.row.coverUrl"
-              :preview-src-list="[scope.row.coverUrl]"
-              fit="cover"
-              style="width: 100px; height: 56px"
-            />
-          </template>
-        </el-table-column>
         <el-table-column prop="title" label="标题" />
-        <el-table-column prop="categoryName" label="分类" width="120" />
-        <el-table-column prop="uploaderName" label="上传者" width="120" />
-        <el-table-column prop="views" label="播放量" width="100" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column prop="createTime" label="上传时间" width="180">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'">
-              {{ scope.row.status === 1 ? '正常' : '下架' }}
-            </el-tag>
+            {{ formatDate(scope.row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="上传时间" width="180" />
-        <el-table-column label="操作" width="200">
+        <el-table-column prop="viewCount" label="播放量" width="100" />
+        <el-table-column label="操作" width="150">
           <template #default="scope">
-            <el-button type="primary" link @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(scope.row)">删除</el-button>
+            <el-button
+              size="small"
+              type="primary"
+              @click="handleView(scope.row)"
+            >
+              查看
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -152,6 +127,31 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 视频详情对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      title="视频详情"
+      width="600px"
+      destroy-on-close
+    >
+      <div v-loading="dialogLoading">
+        <div class="video-info" v-if="currentVideo">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="视频ID">{{ currentVideo.id }}</el-descriptions-item>
+            <el-descriptions-item label="标题">{{ currentVideo.title }}</el-descriptions-item>
+            <el-descriptions-item label="描述">{{ currentVideo.description }}</el-descriptions-item>
+            <el-descriptions-item label="上传时间">{{ formatDate(currentVideo.uploadTime) }}</el-descriptions-item>
+            <el-descriptions-item label="播放量">{{ currentVideo.viewCount }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="currentVideo.status === 1 ? 'success' : 'danger'">
+                {{ currentVideo.status === 1 ? '正常' : '禁用' }}
+              </el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -160,6 +160,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { getVideoListService, getVideoByIdService } from '@/api/admin/admin.js'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -171,11 +172,11 @@ const pageSize = ref(10)
 const total = ref(0)
 const videoList = ref([])
 const categories = ref([])
+const dialogLoading = ref(false)
+const currentVideo = ref(null)
 
 const searchForm = reactive({
-  title: '',
-  categoryId: '',
-  status: ''
+  title: ''
 })
 
 const videoForm = reactive({
@@ -217,16 +218,16 @@ const fetchCategories = async () => {
 const fetchVideoList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('/api/admin/videos', {
-      params: {
-        page: currentPage.value,
-        size: pageSize.value,
-        ...searchForm
-      }
-    })
-    if (response.data.code === 200) {
-      videoList.value = response.data.data.list
-      total.value = response.data.data.total
+    const params = {}
+    if (searchForm.title) {
+      params.title = searchForm.title
+    }
+    
+    const res = await getVideoListService(params)
+    if (res.code === 200) {
+      videoList.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取视频列表失败')
     }
   } catch (error) {
     console.error('获取视频列表失败:', error)
@@ -243,9 +244,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.title = ''
-  searchForm.categoryId = ''
-  searchForm.status = ''
-  handleSearch()
+  fetchVideoList()
 }
 
 const handleSizeChange = (val) => {
@@ -365,6 +364,30 @@ const handleSubmit = async () => {
   }
 }
 
+const handleView = async (video) => {
+  dialogVisible.value = true
+  dialogLoading.value = true
+  try {
+    const res = await getVideoByIdService(video.videoId)
+    if (res.code === 200) {
+      currentVideo.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取视频详情失败')
+    }
+  } catch (error) {
+    console.error('获取视频详情失败:', error)
+    ElMessage.error('获取视频详情失败')
+  } finally {
+    dialogLoading.value = false
+  }
+}
+
+// 格式化日期
+const formatDate = (timestamp) => {
+  if (!timestamp) return '-'
+  return new Date(timestamp).toLocaleString()
+}
+
 onMounted(() => {
   fetchCategories()
   fetchVideoList()
@@ -424,5 +447,13 @@ onMounted(() => {
 
 .video-uploader {
   width: 178px;
+}
+
+.video-info {
+  padding: 20px;
+}
+
+:deep(.el-descriptions__label) {
+  width: 120px;
 }
 </style> 

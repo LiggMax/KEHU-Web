@@ -36,3 +36,14 @@ export const getUserByIdService = (userId) => {
         params: { userId }
     });
 }
+
+// 视频管理相关接口
+export const getVideoListService = (params = {}) => {
+    return request.get('/account/videoList', { params });
+}
+
+export const getVideoByIdService = (videoId) => {
+    return request.get('/account/getVideoById', {
+        params: { videoId }
+    });
+}
