@@ -25,10 +25,14 @@
       </el-form>
       
       <el-table :data="userList" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="userId" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="nickname" label="昵称" />
-        <el-table-column prop="email" label="邮箱" />
+        <el-table-column prop="avatar" label="头像" width="100">
+          <template #default="scope">
+            <el-avatar :src="scope.row.avatar || '/default-avatar.png'" />
+          </template>
+        </el-table-column>
         <el-table-column prop="registerTime" label="注册时间" width="180" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
@@ -105,7 +109,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
+import { getUserListService, addUserService, updateUserService, deleteUserService } from '@/api/admin/admin.js'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -152,19 +156,16 @@ const rules = {
 const fetchUserList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('/api/admin/users', {
-      params: {
-        page: currentPage.value,
-        size: pageSize.value,
-        ...searchForm
-      }
-    })
-    if (response.data.code === 200) {
-      userList.value = response.data.data.list
-      total.value = response.data.data.total
+    const res = await getUserListService()
+    if (res.code === 200) {
+      userList.value = res.data.map(user => ({
+        ...user,
+        registerTime: user.registerTime ? new Date(user.registerTime).toLocaleString() : '-'
+      }))
+    } else {
+      ElMessage.error(res.message || '获取用户列表失败')
     }
   } catch (error) {
-    console.error('获取用户列表失败:', error)
     ElMessage.error('获取用户列表失败')
   } finally {
     loading.value = false
@@ -216,10 +217,12 @@ const handleDelete = (row) => {
     type: 'warning'
   }).then(async () => {
     try {
-      const response = await axios.delete(`/api/admin/users/${row.id}`)
-      if (response.data.code === 200) {
+      const res = await deleteUserService(row.id)
+      if (res.code === 200) {
         ElMessage.success('删除成功')
         fetchUserList()
+      } else {
+        ElMessage.error(res.message || '删除失败')
       }
     } catch (error) {
       console.error('删除用户失败:', error)
@@ -235,14 +238,30 @@ const handleSubmit = async () => {
     await userFormRef.value.validate()
     submitting.value = true
     
-    const url = dialogType.value === 'add' ? '/api/admin/users' : `/api/admin/users/${userForm.id}`
-    const method = dialogType.value === 'add' ? 'post' : 'put'
+    const submitData = {
+      username: userForm.username,
+      nickname: userForm.nickname,
+      email: userForm.email,
+      status: userForm.status
+    }
     
-    const response = await axios[method](url, userForm)
-    if (response.data.code === 200) {
+    if (dialogType.value === 'add') {
+      submitData.password = userForm.password
+    }
+    
+    let res
+    if (dialogType.value === 'add') {
+      res = await addUserService(submitData)
+    } else {
+      res = await updateUserService(userForm.id, submitData)
+    }
+    
+    if (res.code === 200) {
       ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
       dialogVisible.value = false
       fetchUserList()
+    } else {
+      ElMessage.error(res.message || '操作失败')
     }
   } catch (error) {
     console.error('提交表单失败:', error)
@@ -276,5 +295,10 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.el-avatar {
+  width: 40px;
+  height: 40px;
 }
 </style> 

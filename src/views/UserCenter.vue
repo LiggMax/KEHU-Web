@@ -4,6 +4,7 @@ import { ElMessage, ElUpload, ElMessageBox, ElNotification } from 'element-plus'
 import { isLoggedIn, getUserInfo } from '../utils/auth.js';
 import { useRouter } from 'vue-router';
 import { getUserVideosService, uploadVideoService, deleteVideoService, updateVideoService, updateCoverService } from '@/api/user.js'
+import { uploadAvatarService } from '@/api/user.js'
 
 const router = useRouter();
 const currentUser = ref(null);
@@ -36,6 +37,10 @@ const editSubmitting = ref(false);
 // 上传进度
 const uploadProgress = ref(0);
 const uploading = ref(false);
+
+// 头像上传相关
+const avatarUploading = ref(false)
+const avatarUrl = ref('')
 
 // 计算属性：封面预览URL
 const coverPreviewUrl = computed(() => {
@@ -445,6 +450,67 @@ const submitVideoEdit = async () => {
   }
 };
 
+// 处理头像上传
+const handleAvatarChange = (file) => {
+  if (file.raw) {
+    // 检查文件类型
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedTypes.includes(file.raw.type) && !file.raw.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      ElMessage.warning('请上传支持的图片格式文件');
+      return false;
+    }
+    
+    // 检查文件大小，限制为2MB
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.raw.size > maxSize) {
+      ElMessage.warning('头像图片大小不能超过2MB');
+      return false;
+    }
+    
+    uploadAvatar(file.raw);
+  }
+  return false; // 阻止默认上传行为
+};
+
+// 获取头像URL
+const getAvatarUrl = (filename) => {
+  if (!filename) return '/user/default-avatar.png';
+  // 如果已经是完整路径，直接返回
+  if (filename.startsWith('/user/avatar/')) {
+    return filename;
+  }
+  // 否则拼接完整路径
+  return `/user/avatar/${filename}`;
+};
+
+// 上传头像
+const uploadAvatar = async (file) => {
+  avatarUploading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const res = await uploadAvatarService(formData);
+    if (res.code === 200) {
+      // 更新头像URL
+      currentUser.value.avatar = res.data;
+      // 更新本地存储中的用户信息
+      const userInfo = JSON.parse(localStorage.getItem('login_user') || '{}');
+      userInfo.avatar = res.data;
+      localStorage.setItem('login_user', JSON.stringify(userInfo));
+      
+      ElMessage.success('头像更新成功');
+    } else {
+      ElMessage.error(res.message || '头像更新失败');
+    }
+  } catch (error) {
+    console.error('上传头像失败:', error);
+    ElMessage.error('上传头像失败，请稍后再试');
+  } finally {
+    avatarUploading.value = false;
+  }
+};
+
 // 组件销毁时清理资源
 onUnmounted(() => {
   // 清理blob URL
@@ -463,10 +529,21 @@ onUnmounted(() => {
       <!-- 用户信息头部 -->
       <div class="user-header">
         <div class="user-avatar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="#42b883" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
+          <el-upload
+            class="avatar-uploader"
+            action="#"
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleAvatarChange"
+            :disabled="avatarUploading"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+          >
+            <img v-if="currentUser?.avatar" :src="getAvatarUrl(currentUser.avatar)" class="avatar-image" />
+            <el-icon v-else class="avatar-icon"><plus /></el-icon>
+            <div class="avatar-hover-mask" v-if="!avatarUploading">
+              <el-icon><camera /></el-icon>
+            </div>
+          </el-upload>
         </div>
         <div class="user-info">
           <h2>{{ currentUser?.username }}</h2>
@@ -814,12 +891,57 @@ onUnmounted(() => {
 }
 
 .user-avatar {
-  background-color: #f0f9f4;
+  position: relative;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  padding: 1rem;
+  overflow: hidden;
+  background-color: #f0f9f4;
+}
+
+.avatar-uploader {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  position: relative;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-icon {
+  font-size: 32px;
+  color: #42b883;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.avatar-hover-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.avatar-hover-mask .el-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.avatar-uploader:hover .avatar-hover-mask {
+  opacity: 1;
 }
 
 .user-info {

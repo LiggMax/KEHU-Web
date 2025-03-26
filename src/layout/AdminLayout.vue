@@ -84,7 +84,7 @@ onMounted(async () => {
   } catch (error) {
     console.error('获取管理员信息失败:', error)
     ElMessage.error('获取管理员信息失败')
-    router.push('/admin/login')
+    await router.push('/admin/login')
   }
 })
 

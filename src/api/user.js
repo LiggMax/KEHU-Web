@@ -82,3 +82,12 @@ export const updateCoverService = (videoId, coverFile) => {
         }
     })
 }
+
+// 上传头像
+export const uploadAvatarService = (formData) => {
+    return request.post('/user/avatar', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+};
