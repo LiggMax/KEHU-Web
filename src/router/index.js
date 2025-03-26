@@ -49,12 +49,43 @@ const router = createRouter({
       component: () => import('../views/admin/AdminLogin.vue')
     },
     {
-      path: '/admin/dashboard',
-      name: 'AdminDashboard',
-      component: () => import('../views/admin/AdminDashboard.vue'),
+      path: '/admin',
+      name: 'AdminLayout',
+      component: () => import('../layout/AdminLayout.vue'),
       meta: {
         requiresAdminAuth: true
-      }
+      },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/dashboard'
+        },
+        {
+          path: 'dashboard',
+          name: 'AdminDashboard',
+          component: () => import('../views/admin/AdminDashboard.vue')
+        },
+        {
+          path: 'users',
+          name: 'AdminUsers',
+          component: () => import('../views/admin/Users.vue')
+        },
+        {
+          path: 'videos',
+          name: 'AdminVideos',
+          component: () => import('../views/admin/Videos.vue')
+        },
+        {
+          path: 'comments',
+          name: 'AdminComments',
+          component: () => import('../views/admin/Comments.vue')
+        },
+        {
+          path: 'profile',
+          name: 'AdminProfile',
+          component: () => import('../views/admin/Profile.vue')
+        }
+      ]
     }
   ]
 })
@@ -74,6 +105,10 @@ router.beforeEach((to, from, next) => {
       // 已登录，继续导航
       next()
     }
+  }
+  // 如果是管理员登录页面且已经登录，重定向到管理后台
+  else if (to.path === '/admin/login' && localStorage.getItem('isAdminLoggedIn')) {
+    next('/admin/dashboard')
   }
   // 如果路由需要普通用户认证
   else if (to.matched.some(record => record.meta.requiresAuth)) {

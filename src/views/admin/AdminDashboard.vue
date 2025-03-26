@@ -1,15 +1,5 @@
 <template>
   <div class="admin-dashboard">
-    <header class="dashboard-header">
-      <h1>管理员仪表板</h1>
-      <button @click="handleLogout" class="logout-btn">退出登录</button>
-    </header>
-    <div class="dashboard-content">
-      <div class="welcome-message">
-        欢迎回来，管理员
-      </div>
-      <!-- 这里可以添加更多的管理功能组件 -->
-    </div>
   </div>
 </template>
 
@@ -18,12 +8,6 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const handleLogout = () => {
-  // 清除管理员token
-  localStorage.removeItem('admin_token')
-  // 跳转到管理员登录页
-  router.push('/admin/login')
-}
 </script>
 
 <style scoped>

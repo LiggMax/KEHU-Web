@@ -58,7 +58,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DataLine, User, VideoCamera, ChatDotRound, ArrowDown } from '@element-plus/icons-vue'
-import axios from 'axios'
+import {logoutService, getAdminInfoService} from "@/api/admin/admin.js";
 
 const router = useRouter()
 const route = useRoute()
@@ -71,43 +71,34 @@ const adminInfo = ref({
 
 const activeMenu = computed(() => route.path)
 
-onMounted(() => {
-  // 从localStorage获取管理员信息
-  const storedInfo = localStorage.getItem('adminInfo')
-  if (storedInfo) {
-    try {
-      const parsedInfo = JSON.parse(storedInfo)
-      adminInfo.value = parsedInfo
-    } catch (e) {
-      console.error('解析管理员信息失败:', e)
-      // 如果解析失败，清除存储并重定向到登录页
-      localStorage.removeItem('adminToken')
-      localStorage.removeItem('adminInfo')
+onMounted(async () => {
+  try {
+    // 获取管理员信息
+    const res = await getAdminInfoService()
+    if (res.code === 200 && res.data) {
+      adminInfo.value = res.data
+    } else {
+      // 如果获取信息失败，可能是未登录状态
       router.push('/admin/login')
     }
-  } else {
-    // 如果没有管理员信息，重定向到登录页
+  } catch (error) {
+    console.error('获取管理员信息失败:', error)
+    ElMessage.error('获取管理员信息失败')
     router.push('/admin/login')
   }
 })
 
 const handleCommand = async (command) => {
   if (command === 'logout') {
-    try {
       // 调用退出登录接口
-      await adminLogoutService()
+      await logoutService()
       
       // 清除本地存储
       localStorage.removeItem('isAdminLoggedIn')
       
       ElMessage.success('退出成功')
-      router.push('/admin/login')
-    } catch (error) {
-      console.error('退出错误:', error)
-      ElMessage.error('退出失败，请稍后重试')
-    }
-  } else if (command === 'profile') {
-    router.push('/admin/profile')
+      await router.push('/admin')
+    await router.push('/admin/login')
   }
 }
 </script>
