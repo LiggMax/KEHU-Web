@@ -9,8 +9,8 @@ export const logoutService = () => {
 }
 
 // 用户管理相关接口
-export const getUserListService = () => {
-    return request.get('/account/userList')
+export const getUserListService = (params = {}) => {
+    return request.get('/account/userList', { params });
 }
 
 export const addUserService = (data) => {

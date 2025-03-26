@@ -183,7 +183,13 @@ const rules = {
 const fetchUserList = async () => {
   loading.value = true
   try {
-    const res = await getUserListService()
+    // 构建查询参数
+    const params = {};
+    if (searchForm.username) {
+      params.username = searchForm.username;
+    }
+
+    const res = await getUserListService(params)
     if (res.code === 200) {
       userList.value = res.data.map(user => ({
         ...user,
@@ -201,14 +207,13 @@ const fetchUserList = async () => {
 }
 
 const handleSearch = () => {
-  currentPage.value = 1
   fetchUserList()
 }
 
 const handleReset = () => {
   searchForm.username = ''
   searchForm.status = ''
-  handleSearch()
+  fetchUserList()
 }
 
 const handleSizeChange = (val) => {
