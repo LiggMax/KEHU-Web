@@ -1,13 +1,7 @@
 <template>
   <div class="videos-container">
     <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>视频管理</span>
-          <el-button type="primary" @click="handleAdd">添加视频</el-button>
-        </div>
-      </template>
-      
+
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="视频标题">
           <el-input v-model="searchForm.title" placeholder="请输入视频标题" clearable></el-input>

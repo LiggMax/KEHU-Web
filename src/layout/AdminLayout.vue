@@ -6,10 +6,6 @@
         class="admin-menu"
         router
       >
-        <el-menu-item index="/admin/dashboard">
-          <el-icon><DataLine /></el-icon>
-          <span>仪表盘</span>
-        </el-menu-item>
         <el-menu-item index="/admin/users">
           <el-icon><User /></el-icon>
           <span>用户管理</span>

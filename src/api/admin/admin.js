@@ -52,3 +52,18 @@ export const getVideoByIdService = (videoId) => {
 export const deleteVideoService = (id) => {
     return request.delete(`/account/videos/${id}`);
 }
+
+// 评论管理相关接口
+export const getCommentListService = (params = {}) => {
+    return request.get('/account/commentList', { params });
+}
+
+export const getCommentByIdService = (commentId) => {
+    return request.get('/account/getCommentById', {
+        params: { commentId }
+    });
+}
+
+export const deleteCommentService = (id) => {
+    return request.delete(`/account/comments/${id}`);
+}
