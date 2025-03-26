@@ -23,18 +23,16 @@ export const addUserService = (data) => {
     })
 }
 
-export const updateUserService = (id, data) => {
-    return request.put(`/admin/user/update/${id}`, {
-        nickname: data.nickname,
-        email: data.email,
-        status: data.status
-    })
+export const updateUserService = (userData) => {
+    return request.post('/account/updateUser', userData);
 }
 
 export const deleteUserService = (id) => {
     return request.delete(`/admin/user/delete/${id}`)
 }
 
-export const getUserByIdService = (id) => {
-    return request.get(`/admin/user/${id}`)
+export const getUserByIdService = (userId) => {
+    return request.get('/account/getUserById', {
+        params: { userId }
+    });
 }
