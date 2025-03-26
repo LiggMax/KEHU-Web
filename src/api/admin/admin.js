@@ -47,3 +47,8 @@ export const getVideoByIdService = (videoId) => {
         params: { videoId }
     });
 }
+
+// 删除视频
+export const deleteVideoService = (id) => {
+    return request.delete(`/account/videos/${id}`);
+}
