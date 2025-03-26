@@ -1,156 +1,159 @@
-<script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { adminLoginService } from "@/api/admin.js";
-import { setUserInfo } from '@/utils/auth.js';
-
-const router = useRouter();
-const username = ref('');
-const password = ref('');
-const loading = ref(false);
-
-const handleLogin = async () => {
-  if (!username.value || !password.value) {
-    ElMessage.warning('用户名和密码不能为空');
-    return;
-  }
-  
-  loading.value = true;
-  try {
-    const res = await adminLoginService(username.value, password.value);
-    if (res.code === 200) {
-      // 保存用户信息到本地存储
-      setUserInfo(res.data);
-      ElMessage.success('登录成功');
-      // 登录成功后跳转到管理后台
-      router.push('/admin/dashboard');
-    }
-  } catch (error) {
-    console.error('登录失败', error);
-    ElMessage.error('登录失败，请检查用户名和密码');
-  } finally {
-    loading.value = false;
-  }
-};
-</script>
-
 <template>
   <div class="admin-login-container">
     <div class="login-box">
       <h2>管理员登录</h2>
-      <el-form @submit.prevent="handleLogin" class="login-form">
-        <el-form-item>
-          <el-input
-            v-model="username"
-            placeholder="请输入管理员用户名"
-            :prefix-icon="'User'"
+      <form @submit.prevent="handleLogin">
+        <div class="form-group">
+          <label for="username">用户名</label>
+          <input
+            type="text"
+            id="username"
+            v-model="loginForm.username"
+            required
+            placeholder="请输入用户名"
           />
-        </el-form-item>
-        <el-form-item>
-          <el-input
+        </div>
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input
             type="password"
-            v-model="password"
+            id="password"
+            v-model="loginForm.password"
+            required
             placeholder="请输入密码"
-            :prefix-icon="'Lock'"
-            show-password
           />
-        </el-form-item>
-        <el-form-item>
-          <el-button 
-            type="primary" 
-            @click="handleLogin"
-            :loading="loading"
-            class="login-button"
-          >
-            登录
-          </el-button>
-        </el-form-item>
-      </el-form>
+        </div>
+        <div class="form-group">
+          <button type="submit" :disabled="loading">
+            {{ loading ? '登录中...' : '登录' }}
+          </button>
+        </div>
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
+      </form>
     </div>
   </div>
 </template>
 
+<script setup>
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const loading = ref(false)
+const error = ref('')
+
+const loginForm = reactive({
+  username: '',
+  password: ''
+})
+
+const handleLogin = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    // TODO: 调用后端登录API
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(loginForm)
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok) {
+      // 登录成功，存储token
+      localStorage.setItem('admin_token', data.token)
+      // 跳转到管理员首页
+      router.push('/admin/dashboard')
+    } else {
+      error.value = data.message || '登录失败，请检查用户名和密码'
+    }
+  } catch (err) {
+    error.value = '登录失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
 <style scoped>
 .admin-login-container {
-  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f5f7fa;
-  padding: 20px;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 }
 
 .login-box {
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
   background: white;
+  padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
 }
 
 h2 {
   text-align: center;
-  color: #2c3e50;
-  margin-bottom: 30px;
-  font-size: 24px;
+  color: #333;
+  margin-bottom: 2rem;
 }
 
-.login-form {
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+input {
   width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 25px;
+input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
-:deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-  transition: all 0.3s ease;
-  border-radius: 6px;
-}
-
-:deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #409eff inset;
-}
-
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409eff inset;
-}
-
-:deep(.el-input__inner) {
-  height: 40px;
-}
-
-.login-button {
+button {
   width: 100%;
-  height: 40px;
-  font-size: 16px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  padding: 0.75rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-:deep(.el-button--primary) {
-  background-color: #409eff;
+button:hover {
+  background-color: #45a049;
 }
 
-:deep(.el-button--primary:hover) {
-  background-color: #66b1ff;
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
-@media screen and (max-width: 480px) {
-  .login-box {
-    padding: 30px 20px;
-  }
-  
-  h2 {
-    font-size: 20px;
-    margin-bottom: 25px;
-  }
-  
-  :deep(.el-form-item) {
-    margin-bottom: 20px;
-  }
+.error-message {
+  color: #f44336;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
 }
 </style> 

@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import UserCenter from '../views/UserCenter.vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,49 +46,50 @@ const router = createRouter({
     {
       path: '/admin/login',
       name: 'AdminLogin',
-      component: () => import('@/views/admin/AdminLogin.vue')
+      component: () => import('../views/admin/AdminLogin.vue')
     },
     {
-      path: '/admin',
-      component: AdminLayout,
-      children: [
-        {
-          path: 'dashboard',
-          name: 'AdminDashboard',
-          component: () => import('@/views/admin/AdminDashboard.vue')
-        },
-        {
-          path: 'users',
-          name: 'UserManagement',
-          component: () => import('@/views/admin/UserManagement.vue')
-        },
-        {
-          path: 'videos',
-          name: 'VideoManagement',
-          component: () => import('@/views/admin/VideoManagement.vue')
-        },
-        {
-          path: 'comments',
-          name: 'CommentManagement',
-          component: () => import('@/views/admin/CommentManagement.vue')
-        },
-        {
-          path: 'settings',
-          name: 'SystemSettings',
-          component: () => import('@/views/admin/SystemSettings.vue')
-        }
-      ]
+      path: '/admin/dashboard',
+      name: 'AdminDashboard',
+      component: () => import('../views/admin/AdminDashboard.vue'),
+      meta: {
+        requiresAdminAuth: true
+      }
     }
   ]
 })
 
-// 路由守卫
+// 导航守卫
 router.beforeEach((to, from, next) => {
-  const userInfo = localStorage.getItem('login_user')
-  
-  if (to.path.startsWith('/admin') && to.path !== '/admin/login' && !userInfo) {
-    next('/admin/login')
+  // 如果路由需要管理员认证
+  if (to.matched.some(record => record.meta.requiresAdminAuth)) {
+    // 检查是否已登录为管理员
+    if (!localStorage.getItem('admin_token')) {
+      // 未登录，重定向到管理员登录页
+      next({
+        path: '/admin/login',
+        query: { redirect: to.fullPath }
+      })
+    } else {
+      // 已登录，继续导航
+      next()
+    }
+  }
+  // 如果路由需要普通用户认证
+  else if (to.matched.some(record => record.meta.requiresAuth)) {
+    // 检查是否已登录
+    if (!localStorage.getItem('login_user')) {
+      // 未登录，重定向到首页
+      next({
+        path: '/',
+        query: { redirect: to.fullPath }
+      })
+    } else {
+      // 已登录，继续导航
+      next()
+    }
   } else {
+    // 不需要认证的路由，直接导航
     next()
   }
 })
