@@ -67,3 +67,27 @@ export const getCommentByIdService = (commentId) => {
 export const deleteCommentService = (id) => {
     return request.delete(`/account/comments/${id}`);
 }
+
+// 视频排行榜相关接口
+/**
+ * 获取视频播放量排行榜
+ * @param {number} limit 返回的记录数量，默认为10
+ * @returns {Promise} 返回Promise对象
+ */
+export const getVideoRankingService = (limit = 10) => {
+    return request.get('/account/videoRanking', { 
+        params: { limit }
+    });
+}
+
+/**
+ * 获取指定时间范围内的视频播放量排行榜
+ * @param {number} days 最近几天，默认为7
+ * @param {number} limit 返回的记录数量，默认为10
+ * @returns {Promise} 返回Promise对象
+ */
+export const getVideoRankingByDaysService = (days = 7, limit = 10) => {
+    return request.get('/account/videoRankingByDays', {
+        params: { days, limit }
+    });
+}

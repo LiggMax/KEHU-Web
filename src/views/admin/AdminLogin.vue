@@ -68,7 +68,7 @@ const handleLogin = async () => {
       
       ElMessage.success('登录成功')
       // 跳转到管理后台
-      await router.push('/admin/dashboard')
+      await router.push('/admin/users')
     } else {
       error.value = res.message || '登录失败'
       ElMessage.error(error.value)

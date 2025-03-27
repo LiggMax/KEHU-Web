@@ -149,7 +149,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { getVideoListService, getVideoByIdService, deleteVideoService } from '@/api/admin/admin.js'
 

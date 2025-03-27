@@ -58,7 +58,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/admin/dashboard'
+          redirect: '/admin/users'
         },
         {
           path: 'dashboard',
@@ -84,6 +84,11 @@ const router = createRouter({
           path: 'profile',
           name: 'AdminProfile',
           component: () => import('../views/admin/Profile.vue')
+        },
+        {
+          path: 'video-ranking',
+          name: 'VideoRanking',
+          component: () => import('../views/admin/VideoRanking.vue')
         }
       ]
     }
@@ -108,7 +113,7 @@ router.beforeEach((to, from, next) => {
   }
   // 如果是管理员登录页面且已经登录，重定向到管理后台
   else if (to.path === '/admin/login' && localStorage.getItem('isAdminLoggedIn')) {
-    next('/admin/dashboard')
+    next('/admin/users')
   }
   // 如果路由需要普通用户认证
   else if (to.matched.some(record => record.meta.requiresAuth)) {

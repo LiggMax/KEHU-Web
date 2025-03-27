@@ -18,15 +18,20 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>评论管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/video-ranking">
+          <el-icon><TrendCharts /></el-icon>
+          <span>视频排行榜</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
-    
+
     <el-container>
       <el-header>
         <div class="header-left">
           <h2>视频网站管理系统</h2>
         </div>
         <div class="header-right">
+          管理员：
           <el-dropdown @command="handleCommand">
             <span class="admin-info">
               {{ adminInfo.nickname || adminInfo.username }}
@@ -41,7 +46,7 @@
           </el-dropdown>
         </div>
       </el-header>
-      
+
       <el-main>
         <router-view></router-view>
       </el-main>
@@ -53,7 +58,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { DataLine, User, VideoCamera, ChatDotRound, ArrowDown } from '@element-plus/icons-vue'
+import { User, VideoCamera, ChatDotRound, TrendCharts, ArrowDown } from '@element-plus/icons-vue'
 import {logoutService, getAdminInfoService} from "@/api/admin/admin.js";
 
 const router = useRouter()
@@ -88,10 +93,10 @@ const handleCommand = async (command) => {
   if (command === 'logout') {
       // 调用退出登录接口
       await logoutService()
-      
+
       // 清除本地存储
       localStorage.removeItem('isAdminLoggedIn')
-      
+
       ElMessage.success('退出成功')
       await router.push('/admin')
     await router.push('/admin/login')
